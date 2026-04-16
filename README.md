@@ -1,19 +1,19 @@
 # RentVago
 
-Proyecto base con Next.js + TypeScript + Tailwind listo para empezar desarrollo.
+Base project with Next.js + TypeScript + Tailwind, ready to start development.
 
 ## Package Manager
 
-Este repositorio usa solo Bun.
+This repository uses Bun only.
 
-- Instalar: bun install
-- Desarrollo: bun dev
+- Install: bun install
+- Development: bun dev
 - Build: bun run build
 - Lint: bun run lint
 
-El uso de npm, yarn y pnpm esta bloqueado por preinstall.
+Using npm, yarn, and pnpm is blocked by the preinstall check.
 
-## Estructura
+## Structure
 
 - src/app
 - src/components
@@ -21,19 +21,19 @@ El uso de npm, yarn y pnpm esta bloqueado por preinstall.
 - src/agents
 - src/workers
 
-## Arquitectura
+## Architecture
 
-- Arquitectura actual: capas tecnicas (layered, folder-by-type)
-- Arquitectura objetivo: Clean Architecture
-- Estrategia: migracion incremental por modulo/feature, sin big-bang rewrite
+- Current architecture: technical layers (layered, folder-by-type)
+- Target architecture: Clean Architecture
+- Strategy: incremental migration per module/feature, without a big-bang rewrite
 
-### Reglas de transicion
+### Transition Rules
 
-- El dominio no debe depender de infraestructura
-- Los casos de uso orquestan dominio y puertos
-- La infraestructura implementa puertos, no reglas de negocio
-- Cada feature nueva debe acercar el codigo al objetivo Clean
+- Domain must not depend on infrastructure
+- Use cases orchestrate domain and ports
+- Infrastructure implements ports, not business rules
+- Every new feature should move the codebase closer to the Clean target
 
-## Variables de entorno
+## Environment Variables
 
-Usa .env.example como base para crear tu .env.local.
+Use .env.example as the base to create your .env.local.
