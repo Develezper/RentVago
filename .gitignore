@@ -44,3 +44,13 @@ next-env.d.ts
 .vscode/
 
 /src/generated/prisma
+
+# Docker & Databases
+.env
+.env.docker
+docker_data/
+postgres_data/
+mysql_data/
+
+# Prisma
+/prisma/migrations 
