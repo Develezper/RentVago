@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/mysql";
 import { PropertySchema, LeaseSchema, PaymentSchema, UserSchema } from "@/models/schemas"; 
 
 //  ACCIONES DE USUARIOS (Users)
-export async function createUserAction(formData: FormData) {
+export async function createUserAction(prevState: any, formData: FormData) {
   const rawData = {
     email: formData.get("email"),
     name: formData.get("name"),
@@ -28,7 +28,7 @@ export async function createUserAction(formData: FormData) {
 }
 
 // ACCIONES DE PROPIEDADES (Properties)
-export async function createPropertyAction(formData: FormData) {
+export async function createPropertyAction(prevState: any, formData: FormData) {
   const rawData = {
     title: formData.get("title"),
     address: formData.get("address"),
@@ -54,7 +54,7 @@ export async function createPropertyAction(formData: FormData) {
 }
 
 // ACCIONES DE CONTRATOS DE ALQUILER (Leases)
-export async function createLeaseAction(formData: FormData) {
+export async function createLeaseAction(prevState: any, formData: FormData) {
   const rawData = {
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
@@ -82,7 +82,7 @@ export async function createLeaseAction(formData: FormData) {
  *  ACCIONES DE PAGOS (Payments)
  * ====================================================================== */
 
-export async function createPaymentAction(formData: FormData) {
+export async function createPaymentAction(prevState: any, formData: FormData) {
   const rawData = {
     amount: formData.get("amount"),
     status: formData.get("status"),
