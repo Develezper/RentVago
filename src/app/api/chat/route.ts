@@ -9,13 +9,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El prompt es requerido" }, { status: 400 });
     }
 
-    // Optimización Inicial: Definición del System Prompt
+    // Initial Optimization: Definition of the System Prompt
     const systemPrompt = "Eres un agente inteligente integrado en una plataforma SaaS. Tu rol es asistir al usuario de manera precisa, profesional y concisa. Responde siempre en español.";
 
-    // Inicio de medición de latencia
+    // Start of latency measurement
     const startTime = performance.now();
 
-    // Llamada a la API local de Ollama
+    // Call to the local Ollama API
     const response = await fetch('http://127.0.0.1:11434/api/generate', {
       method: 'POST',
       headers: {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         model: 'phi3',
         prompt: prompt,
         system: systemPrompt,
-        stream: false, // Desactivado para este PoC; retorna la respuesta completa de una vez
+        stream: false, // Disabled for this PoC; returns the complete response at once
       }),
     });
 
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       success: true,
       model: data.model,
       response: data.response,
-      latency: `${latencyMs}ms` // Documentación de la latencia en la misma respuesta
+      latency: `${latencyMs}ms` // Documentation of latency in the same response
     });
 
   } catch (error) {
