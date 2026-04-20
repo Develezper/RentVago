@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  name          String?
+  properties    Property[]     
+  notifications Notification[] 
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Property {
+  id          Int      @id @default(autoincrement())
+  title       String
+  address     String
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  leases      Lease[]  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lease {
+  id         Int       @id @default(autoincrement())
+  startDate  DateTime
+  endDate    DateTime
+  propertyId Int
+  property   Property  @relation(fields: [propertyId], references: [id])
+  payments   Payment[] 
+  createdAt  DateTime  @default(now())
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  amount    Decimal  @db.Decimal(10, 2)
+  status    String   @default("pending") // pending, paid, overdue
+  leaseId   Int
+  lease     Lease    @relation(fields: [leaseId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  isRead    Boolean  @default(false)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
