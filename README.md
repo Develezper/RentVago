@@ -37,3 +37,13 @@ Using npm, yarn, and pnpm is blocked by the preinstall check.
 ## Environment Variables
 
 Use .env.example as the base to create your .env.local.
+
+## Docker
+
+``` bash
+    docker compose up -d
+```
+
+``` bash
+    docker compose down
+``` 
