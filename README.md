@@ -47,3 +47,13 @@ Use .env.example as the base to create your .env.local.
 ``` bash
     docker compose down
 ``` 
+## Local AI Inference Engine
+
+This project uses [Ollama](https://ollama.com/) and the **Phi-3** model to run intelligent agents locally. This approach ensures data privacy and eliminates external API costs during development.
+
+### Prerequisites
+
+1. **Install Ollama:** Download and install it from [ollama.com](https://ollama.com/).
+2. **Download the Model:** Open your terminal and run the following command to get the lightweight Phi-3 model:
+   ```bash
+   ollama pull phi3
