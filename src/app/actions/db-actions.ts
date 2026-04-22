@@ -11,7 +11,7 @@ export interface FormState {
 }
 
 //  ACCIONES DE USUARIOS (Users)
-export async function createUserAction(prevState: FormState, formData: FormData) {
+export async function createUserAction(prevState: FormState | null, formData: FormData): Promise<FormState> {
   const rawData = {
     email: formData.get("email"),
     name: formData.get("name"),
@@ -35,7 +35,7 @@ export async function createUserAction(prevState: FormState, formData: FormData)
 }
 
 // ACCIONES DE PROPIEDADES (Properties)
-export async function createPropertyAction(prevState: FormState, formData: FormData) {
+export async function createPropertyAction(prevState: FormState | null, formData: FormData): Promise<FormState> {
   const rawData = {
     title: formData.get("title"),
     address: formData.get("address"),
@@ -61,7 +61,7 @@ export async function createPropertyAction(prevState: FormState, formData: FormD
 }
 
 // ACCIONES DE CONTRATOS DE ALQUILER (Leases)
-export async function createLeaseAction(prevState: FormState, formData: FormData) {
+export async function createLeaseAction(prevState: FormState | null, formData: FormData): Promise<FormState> {
   const rawData = {
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
@@ -87,7 +87,7 @@ export async function createLeaseAction(prevState: FormState, formData: FormData
 
  // ACCIONES DE PAGOS (Payments)
 
-export async function createPaymentAction(prevState: FormState, formData: FormData) {
+export async function createPaymentAction(prevState: FormState | null, formData: FormData): Promise<FormState> {
   const rawData = {
     amount: formData.get("amount"),
     status: formData.get("status"),
