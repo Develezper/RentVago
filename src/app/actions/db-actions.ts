@@ -1,6 +1,6 @@
 "use server"
 
-import { prisma } from "@/lib/db/mysql"; 
+import { prisma } from "@/lib/db/prisma"; 
 import { PropertySchema, LeaseSchema, PaymentSchema, UserSchema } from "@/models/schemas"; 
 
 export interface FormState {

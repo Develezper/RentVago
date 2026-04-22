@@ -1,13 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../src/lib/db/prisma';
 import mongoose from 'mongoose';
 import { ScrapedListing, AILog, ScrapingJob } from '../src/models/MongoSchemas';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log(' Iniciando el proceso de Seeding...');
 
-  // --- 1. SEED PARA MYSQL (PRISMA) ---
+  // --- 1. SEED PARA POSTGRESQL (PRISMA) ---
   const user = await prisma.user.upsert({
     where: { email: 'kevinsito@rentvago.com' },
     update: {},
@@ -35,7 +33,7 @@ async function main() {
       }
     }
   });
-  console.log('MySQL: Datos de prueba creados.');
+  console.log('PostgreSQL: Datos de prueba creados.');
 
   // --- 2. SEED PARA MONGODB (MONGOOSE) ---
   const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/rentvago_mongo';
