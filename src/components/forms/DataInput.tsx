@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { createUserAction } from "@/app/actions/db-actions";
 
 export default function DataInput() {
-  const [state, formAction, isPending] = useActionState(createUserAction, undefined);
+  const [state, formAction, isPending] = useActionState(createUserAction, null);
 
   return (
     <form action={formAction} className="flex flex-col gap-4 max-w-sm mx-auto p-6 mt-10 rounded shadow-md border">

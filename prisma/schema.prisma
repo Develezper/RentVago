@@ -1,17 +1,19 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 model User {
   id            Int            @id @default(autoincrement())
   email         String         @unique
   name          String?
-  properties    Property[]     
-  notifications Notification[] 
+  properties    Property[]
+  notifications Notification[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -24,7 +26,7 @@ model Property {
   price       Decimal  @db.Decimal(10, 2)
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
-  leases      Lease[]  
+  leases      Lease[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -35,7 +37,7 @@ model Lease {
   endDate    DateTime
   propertyId Int
   property   Property  @relation(fields: [propertyId], references: [id])
-  payments   Payment[] 
+  payments   Payment[]
   createdAt  DateTime  @default(now())
 }
 
@@ -55,4 +57,12 @@ model Notification {
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Embedding {
+  id        Int                      @id @default(autoincrement())
+  content   String?
+  embedding Unsupported("vector(768)")?
+
+  @@map("embeddings")
 }

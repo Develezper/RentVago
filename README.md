@@ -57,3 +57,25 @@ This project uses [Ollama](https://ollama.com/) and the **Phi-3** model to run i
 2. **Download the Model:** Open your terminal and run the following command to get the lightweight Phi-3 model:
    ```bash
    ollama pull phi3
+
+## Prisma
+
+This command is used to generate the prisma client, push the schema to the database, seed the database and open the prisma studio.
+
+``` bash
+    bunx --bun prisma generate
+```
+
+``` bash
+    bunx --bun prisma db push
+```
+
+``` bash
+    bunx --bun prisma db seed
+```
+
+``` bash
+    bunx --bun prisma studio
+```
+
+> Use the flag *--bun* to run prisma commands.
