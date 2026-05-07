@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppToaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-gray-950 text-gray-100 min-h-screen">{children}</body>
+      <body className="bg-gray-950 text-gray-100 min-h-screen">
+        {children}
+        <AppToaster />
+      </body>
     </html>
   );
 }

@@ -12,15 +12,18 @@ import {
   buildSearchParams,
   defaultFilters,
   type FilterState,
+  type SavedSearchFilterItem,
   type SearchMeta,
   type SearchPageSize,
   type SearchSort,
   toSaveSearchFilterPayload,
   type ViewerRole,
 } from "./search-page.shared";
+import { toast } from "sonner";
 
 interface SearchPageClientProps {
   initialFilters: FilterState;
+  savedSearchFilters: SavedSearchFilterItem[];
   currentPage: number;
   currentPageSize: SearchPageSize;
   meta: SearchMeta;
@@ -33,6 +36,23 @@ interface RequestResult {
   ok: boolean;
   error?: string;
 }
+
+const buildFilterSignature = (filters: FilterState): string => {
+  return JSON.stringify(toSaveSearchFilterPayload(filters));
+};
+
+const buildSavedFilterSignature = (savedFilter: SavedSearchFilterItem): string => {
+  const minPrice = savedFilter.minPrice === null ? undefined : Number(savedFilter.minPrice);
+  const maxPrice = savedFilter.maxPrice === null ? undefined : Number(savedFilter.maxPrice);
+
+  return JSON.stringify({
+    query: savedFilter.query ?? undefined,
+    location: savedFilter.location ?? undefined,
+    minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
+    maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
+    rooms: savedFilter.rooms ?? undefined,
+  });
+};
 
 const isDeferredFilterKey = (key: keyof FilterState): boolean =>
   key === "query" || key === "minPrice" || key === "maxPrice";
@@ -86,6 +106,7 @@ const requestSaveSearchFilter = async (filters: FilterState): Promise<RequestRes
 
 export function SearchPageClient({
   initialFilters,
+  savedSearchFilters,
   currentPage,
   currentPageSize,
   meta,
@@ -99,8 +120,10 @@ export function SearchPageClient({
   const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [pageSize, setPageSizeState] = useState<SearchPageSize>(currentPageSize);
-  const [saveSearchFilterMessage, setSaveSearchFilterMessage] = useState<string>("");
   const [isSavingSearchFilter, setIsSavingSearchFilter] = useState<boolean>(false);
+  const [savedFilterSignatures, setSavedFilterSignatures] = useState<Set<string>>(
+    () => new Set(savedSearchFilters.map(buildSavedFilterSignature)),
+  );
 
   const hasInvalidPriceRange = hasInvalidPriceRangeForFilters(filters);
   const priceRangeValidationMessage = hasInvalidPriceRange
@@ -109,6 +132,8 @@ export function SearchPageClient({
 
   const committedQueryString = searchParams.toString();
   const totalProperties = meta.total;
+  const currentFilterSignature = useMemo(() => buildFilterSignature(filters), [filters]);
+  const isSearchAlertActive = savedFilterSignatures.has(currentFilterSignature);
 
   const navigateToState = useCallback(
     (nextFilters: FilterState, nextPage: number, nextPageSize: SearchPageSize) => {
@@ -145,7 +170,6 @@ export function SearchPageClient({
 
   const setFilterValue = useCallback(
     <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-      setSaveSearchFilterMessage("");
       const nextFilters = updateFilters((previous) => ({ ...previous, [key]: value }));
       if (!isDeferredFilterKey(key)) commitImmediate(nextFilters);
     },
@@ -161,19 +185,16 @@ export function SearchPageClient({
   );
 
   const clearFilters = useCallback(() => {
-    setSaveSearchFilterMessage("");
     setFilters(defaultFilters);
     commitImmediate(defaultFilters);
   }, [commitImmediate]);
 
   const commitDraftFilters = useCallback(() => {
-    setSaveSearchFilterMessage("");
     commitImmediate(filters);
   }, [commitImmediate, filters]);
 
   const setSort = useCallback(
     (value: SearchSort) => {
-      setSaveSearchFilterMessage("");
       const nextFilters = updateFilters((previous) => ({ ...previous, sort: value }));
       commitImmediate(nextFilters);
     },
@@ -182,7 +203,6 @@ export function SearchPageClient({
 
   const setPageSize = useCallback(
     (value: SearchPageSize) => {
-      setSaveSearchFilterMessage("");
       setPageSizeState(value);
       navigateToState(filters, 1, value);
     },
@@ -191,21 +211,41 @@ export function SearchPageClient({
 
   const saveSearchFilter = useCallback(() => {
     if (hasInvalidPriceRange) {
-      setSaveSearchFilterMessage("Corrige el rango de precios antes de guardar.");
+      toast.error("Corrige el rango de precios antes de activar la alerta.");
       return;
     }
     if (isSavingSearchFilter) return;
+    if (isSearchAlertActive) {
+      toast.success("La alerta para esta búsqueda ya está activa.");
+      return;
+    }
 
     const run = async () => {
       setIsSavingSearchFilter(true);
-      setSaveSearchFilterMessage("");
       const result = await requestSaveSearchFilter(filters);
-      setSaveSearchFilterMessage(result.ok ? "Busqueda guardada." : (result.error ?? ""));
+
+      if (result.ok) {
+        setSavedFilterSignatures((previous) => {
+          const next = new Set(previous);
+          next.add(currentFilterSignature);
+          return next;
+        });
+        toast.success("Alerta activada. Te avisaremos cuando aparezca un match.");
+      } else {
+        toast.error(result.error ?? "No pudimos activar la alerta.");
+      }
+
       setIsSavingSearchFilter(false);
     };
 
     void run();
-  }, [filters, hasInvalidPriceRange, isSavingSearchFilter]);
+  }, [
+    currentFilterSignature,
+    filters,
+    hasInvalidPriceRange,
+    isSavingSearchFilter,
+    isSearchAlertActive,
+  ]);
 
   const goToPreviousPage = useCallback(() => {
     navigateToState(filters, Math.max(1, currentPage - 1), pageSize);
@@ -230,9 +270,9 @@ export function SearchPageClient({
         <SearchFiltersPanel
           filters={filters}
           isSavingSearchFilter={isSavingSearchFilter}
+          isSearchAlertActive={isSearchAlertActive}
           hasInvalidPriceRange={hasInvalidPriceRange}
           priceRangeValidationMessage={priceRangeValidationMessage}
-          saveSearchFilterMessage={saveSearchFilterMessage}
           onFilterChange={setFilterValue}
           onPriceRangeBlur={commitDraftFilters}
           onClearFilters={clearFilters}

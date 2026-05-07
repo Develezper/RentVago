@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type PropertyTypeOption = "CASA" | "APARTAMENTO";
 
@@ -38,7 +39,6 @@ export function NewPropertyForm() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const isDisabled = useMemo(() => {
     return (
@@ -55,12 +55,11 @@ export function NewPropertyForm() {
 
     const parsedPrice = Number(form.price);
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setErrorMessage("El precio debe ser un numero mayor que cero.");
+      toast.error("El precio debe ser un número mayor que cero.");
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage("");
 
     try {
       const response = await fetch("/api/properties/direct", {
@@ -81,10 +80,11 @@ export function NewPropertyForm() {
         throw new Error(extractApiError(payload));
       }
 
+      toast.success("Inmueble publicado y enviado a revisión.");
       router.push("/search");
       router.refresh();
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : "Error de red al publicar.");
+      toast.error(error instanceof Error ? error.message : "Error de red al publicar.");
     } finally {
       setIsSubmitting(false);
     }
@@ -176,13 +176,6 @@ export function NewPropertyForm() {
             required
           />
         </div>
-
-        {errorMessage ? (
-          <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {errorMessage}
-          </p>
-        ) : null}
-
         <button
           type="submit"
           disabled={isDisabled}

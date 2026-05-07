@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 const inputCls =
   "w-full rounded-2xl bg-gray-900 border border-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500";
@@ -12,11 +13,9 @@ const labelCls = "block text-sm font-bold text-gray-400 mb-1.5";
 export default function NewPropertyPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
     setSaving(true);
 
     const fd = new FormData(e.currentTarget);
@@ -54,10 +53,11 @@ export default function NewPropertyPage() {
             : "Error al crear la propiedad.";
         throw new Error(msg);
       }
+      toast.success("Propiedad creada correctamente.");
       router.push("/admin/properties");
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error inesperado.");
+      toast.error(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
       setSaving(false);
     }
@@ -73,13 +73,6 @@ export default function NewPropertyPage() {
         Volver
       </Link>
       <h1 className="text-3xl font-black text-white tracking-tight mb-8">Nueva Propiedad</h1>
-
-      {error && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl text-sm">
-          {error}
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className={labelCls}>Título *</label>

@@ -8,7 +8,9 @@ import {
   ApprovePropertyUseCase,
   PropertyNotFoundError,
 } from "@/modules/properties/application/approve-property.use-case";
+import { NotifyMatchingUsersUseCase } from "@/modules/properties/application/notify-matching-users.use-case";
 import { propertiesRepository } from "@/modules/properties/infrastructure/property.repository";
+import { searchFilterRepository } from "@/modules/properties/infrastructure/search-filter.repository";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -22,7 +24,11 @@ export async function PATCH(
     requireRole(user, ["ADMIN", "EMPLOYEE"]);
 
     const { id } = await params;
-    const useCase = new ApprovePropertyUseCase(propertiesRepository);
+    const notifyMatchingUsersUseCase = new NotifyMatchingUsersUseCase(searchFilterRepository);
+    const useCase = new ApprovePropertyUseCase(
+      propertiesRepository,
+      notifyMatchingUsersUseCase,
+    );
     const updated = await useCase.execute(id);
 
     return NextResponse.json({ data: updated }, { status: 200 });

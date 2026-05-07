@@ -48,6 +48,12 @@ export default async function DashboardLayout({
             >
               Favoritos
             </Link>
+            <Link
+              href="/alerts"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+            >
+              Alertas
+            </Link>
             {roleValue === "ADMIN" ? (
               <Link
                 href="/admin"

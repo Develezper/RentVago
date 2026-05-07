@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface PendingPropertyItem {
   id: string;
@@ -59,9 +60,11 @@ export function PendingPropertiesClient({ initialProperties }: PendingProperties
       }
 
       setItems((previous) => previous.filter((property) => property.id !== id));
-      alert("Publicacion aprobada correctamente.");
+      toast.success("Publicación aprobada correctamente.");
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : "Error de red al aprobar la propiedad.");
+      toast.error(
+        error instanceof Error ? error.message : "Error de red al aprobar la propiedad.",
+      );
     } finally {
       setApprovingId(null);
     }

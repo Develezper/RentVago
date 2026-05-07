@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { SearchFilterRepository } from "@/modules/properties/domain/search-filter.repository";
 import type {
+  SearchAlertCandidate,
   SaveSearchFilterInput,
   UserSearchFilter,
 } from "@/modules/properties/domain/search-filter.types";
@@ -17,8 +18,28 @@ const searchFilterSelect = {
   updatedAt: true,
 } as const;
 
+const alertCandidateSelect = {
+  id: true,
+  query: true,
+  minPrice: true,
+  maxPrice: true,
+  location: true,
+  createdAt: true,
+  userId: true,
+  user: {
+    select: {
+      email: true,
+      isActive: true,
+    },
+  },
+} as const;
+
 type SearchFilterSelected = Prisma.SearchFilterGetPayload<{
   select: typeof searchFilterSelect;
+}>;
+
+type SearchFilterAlertCandidateSelected = Prisma.SearchFilterGetPayload<{
+  select: typeof alertCandidateSelect;
 }>;
 
 const normalizeNullableString = (value: string | undefined): string | null => {
@@ -44,6 +65,19 @@ const mapSearchFilter = (filter: SearchFilterSelected): UserSearchFilter => ({
   rooms: filter.rooms,
   createdAt: filter.createdAt,
   updatedAt: filter.updatedAt,
+});
+
+const mapSearchAlertCandidate = (
+  candidate: SearchFilterAlertCandidateSelected,
+): SearchAlertCandidate => ({
+  filterId: candidate.id,
+  userId: candidate.userId,
+  userEmail: candidate.user.email,
+  query: candidate.query,
+  location: candidate.location,
+  minPrice: candidate.minPrice === null ? null : Number(candidate.minPrice),
+  maxPrice: candidate.maxPrice === null ? null : Number(candidate.maxPrice),
+  createdAt: candidate.createdAt,
 });
 
 class PrismaSearchFilterRepository implements SearchFilterRepository {
@@ -134,6 +168,22 @@ class PrismaSearchFilterRepository implements SearchFilterRepository {
         });
 
     return mapSearchFilter(saved);
+  }
+
+  async listAlertCandidates(): Promise<SearchAlertCandidate[]> {
+    const filters = await prisma.searchFilter.findMany({
+      where: {
+        user: {
+          isActive: true,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      select: alertCandidateSelect,
+    });
+
+    return filters
+      .filter((candidate) => candidate.user.isActive)
+      .map(mapSearchAlertCandidate);
   }
 }
 

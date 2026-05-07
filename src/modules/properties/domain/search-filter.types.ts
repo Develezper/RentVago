@@ -16,3 +16,14 @@ export interface UserSearchFilter {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface SearchAlertCandidate {
+  filterId: string;
+  userId: string;
+  userEmail: string;
+  query: string | null;
+  location: string | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  createdAt: Date;
+}

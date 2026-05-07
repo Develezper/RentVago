@@ -1,4 +1,5 @@
 import type {
+  SearchAlertCandidate,
   SaveSearchFilterInput,
   UserSearchFilter,
 } from "./search-filter.types";
@@ -15,4 +16,5 @@ export interface SearchFilterRepository {
   ): Promise<UserSearchFilter | null>;
   deleteByIdForUser(userId: string, id: string): Promise<boolean>;
   saveLatestForUser(userId: string, input: SaveSearchFilterInput): Promise<UserSearchFilter>;
+  listAlertCandidates(): Promise<SearchAlertCandidate[]>;
 }

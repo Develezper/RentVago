@@ -7,6 +7,7 @@ import {
   propertiesUseCases,
   type PropertySearchFilters,
 } from "@/modules/properties/application/property.use-cases";
+import { searchFilterUseCases } from "@/modules/properties/application/search-filter.use-cases";
 import {
   buildPdfDownloadHref,
   type FilterState,
@@ -82,13 +83,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const initialState = parseStateFromUrl(queryString.length > 0 ? `?${queryString}` : "");
   const { userId, role } = await getAuthenticatedViewer();
 
-  const [results, favoriteItems] = await Promise.all([
+  const [results, favoriteItems, savedSearchFilters] = await Promise.all([
     propertiesUseCases.searchProperties(
       toServiceFilters(initialState.filters, initialState.page, initialState.pageSize),
     ),
     userId === null
       ? Promise.resolve([])
       : favoritesUseCases.listFavoritePropertyIdsForUser(userId),
+    userId === null ? Promise.resolve([]) : searchFilterUseCases.listForUser(userId),
   ]);
 
   const favoritePropertyIds = favoriteItems.map((favorite) => favorite.propertyId);
@@ -102,6 +104,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <SearchPageClient
         key={queryString || "default-search"}
         initialFilters={initialState.filters}
+        savedSearchFilters={savedSearchFilters}
         currentPage={results.meta.page}
         currentPageSize={currentPageSize}
         meta={results.meta}

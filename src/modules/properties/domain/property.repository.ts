@@ -43,9 +43,11 @@ export interface PropertiesRepository {
     images: string[];
     price: { toString(): string };
     location: string;
+    city: string | null;
     rooms: number | null;
     type: string;
     isScraped: boolean;
+    status: PropertyStatus;
     createdAt: Date;
     ownerId: string | null;
   } | null>;

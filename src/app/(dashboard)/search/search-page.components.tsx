@@ -1,5 +1,6 @@
 import { FormEvent } from "react";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { FavoriteButton } from "@/components/ui/favorite-button";
 import {
   currencyFormat,
@@ -70,9 +71,9 @@ export function SearchHero({
 interface SearchFiltersPanelProps {
   filters: FilterState;
   isSavingSearchFilter: boolean;
+  isSearchAlertActive: boolean;
   hasInvalidPriceRange: boolean;
   priceRangeValidationMessage: string;
-  saveSearchFilterMessage: string;
   onPriceRangeBlur: () => void;
   onFilterChange: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   onClearFilters: () => void;
@@ -82,9 +83,9 @@ interface SearchFiltersPanelProps {
 export function SearchFiltersPanel({
   filters,
   isSavingSearchFilter,
+  isSearchAlertActive,
   hasInvalidPriceRange,
   priceRangeValidationMessage,
-  saveSearchFilterMessage,
   onPriceRangeBlur,
   onFilterChange,
   onClearFilters,
@@ -185,16 +186,19 @@ export function SearchFiltersPanel({
           type="button"
           onClick={onSaveSearchFilter}
           disabled={isSavingSearchFilter || hasInvalidPriceRange}
-          className="h-11 w-full rounded-2xl bg-green-500 px-4 text-sm font-extrabold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            isSearchAlertActive
+              ? "border-green-500 bg-green-500/10 text-green-300"
+              : "border-gray-700 bg-gray-900 text-white hover:border-green-500/60"
+          }`}
         >
-          {isSavingSearchFilter ? "Guardando..." : "Guardar busqueda"}
+          <Bell className="h-4 w-4" />
+          {isSavingSearchFilter
+            ? "Activando alerta..."
+            : isSearchAlertActive
+              ? "Alerta activa para esta busqueda"
+              : "Activar alerta para esta busqueda"}
         </button>
-
-        {saveSearchFilterMessage ? (
-          <p className="rounded-2xl border border-green-500/20 bg-green-500/10 px-3 py-2 text-sm text-green-400">
-            {saveSearchFilterMessage}
-          </p>
-        ) : null}
       </div>
     </aside>
   );
@@ -346,7 +350,7 @@ export function PropertyGrid({
             />
             <Link href={`/search/${property.id}`} className="block">
               <div
-                className="relative h-36 bg-gradient-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
+                className="relative h-36 bg-linear-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
                 style={{
                   backgroundImage: property.imageUrl
                     ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${property.imageUrl})`
