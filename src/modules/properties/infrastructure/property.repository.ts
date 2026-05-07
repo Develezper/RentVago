@@ -67,8 +67,23 @@ const buildPublicPropertyWhere = (
   };
 };
 
+const clearExpiredFeaturedProperties = async (): Promise<void> => {
+  await prisma.property.updateMany({
+    where: {
+      isFeatured: true,
+      featuredUntil: { lt: new Date() },
+    },
+    data: {
+      isFeatured: false,
+      featuredUntil: null,
+    },
+  });
+};
+
 class PrismaPropertiesRepository implements PropertiesRepository {
   async searchProperties(filters: PropertySearchFilters): Promise<PropertySearchResult> {
+    await clearExpiredFeaturedProperties();
+
     const query = filters.query?.trim() ?? "";
     const location = filters.location?.trim() ?? "";
     const city = filters.city?.trim() ?? "";
@@ -134,13 +149,25 @@ class PrismaPropertiesRepository implements PropertiesRepository {
     const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
 
     const orderByClause = (() => {
-      if (sort === "priceAsc") return Prisma.sql`ORDER BY "price" ASC, "createdAt" DESC`;
-      if (sort === "priceDesc") return Prisma.sql`ORDER BY "price" DESC, "createdAt" DESC`;
-      if (sort === "newest") return Prisma.sql`ORDER BY "createdAt" DESC`;
-      if (strictTextSearchQuery) {
-        return Prisma.sql`ORDER BY ts_rank("search_vector", ${strictTextSearchQuery}) DESC, "createdAt" DESC`;
+      const featuredRankSql = Prisma.sql`CASE WHEN "isFeatured" = true AND ("featuredUntil" IS NULL OR "featuredUntil" >= NOW()) THEN 1 ELSE 0 END`;
+
+      if (sort === "priceAsc") {
+        return Prisma.sql`ORDER BY ${featuredRankSql} DESC, "price" ASC, "createdAt" DESC`;
       }
-      return Prisma.sql`ORDER BY "createdAt" DESC`;
+
+      if (sort === "priceDesc") {
+        return Prisma.sql`ORDER BY ${featuredRankSql} DESC, "price" DESC, "createdAt" DESC`;
+      }
+
+      if (sort === "newest") {
+        return Prisma.sql`ORDER BY ${featuredRankSql} DESC, "createdAt" DESC`;
+      }
+
+      if (strictTextSearchQuery) {
+        return Prisma.sql`ORDER BY ${featuredRankSql} DESC, ts_rank("search_vector", ${strictTextSearchQuery}) DESC, "createdAt" DESC`;
+      }
+
+      return Prisma.sql`ORDER BY ${featuredRankSql} DESC, "createdAt" DESC`;
     })();
 
     const [properties, countResult] = await Promise.all([
@@ -153,6 +180,8 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         price: number | string;
         location: string;
         rooms: number;
+        isFeatured: boolean;
+        featuredUntil: Date | null;
       }>>`
         SELECT
           "id",
@@ -162,7 +191,9 @@ class PrismaPropertiesRepository implements PropertiesRepository {
           COALESCE("images", ARRAY[]::text[]) AS "images",
           "price",
           "location",
-          COALESCE("rooms", 0) AS "rooms"
+          COALESCE("rooms", 0) AS "rooms",
+          "isFeatured",
+          "featuredUntil"
         FROM "Property"
         ${whereClause}
         ${orderByClause}
@@ -201,15 +232,23 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       location: string;
       rooms: number | null;
       type: string;
+      isFeatured: boolean;
+      featuredUntil: Date | null;
     }>;
   }> {
+    await clearExpiredFeaturedProperties();
+
     const where = buildPublicPropertyWhere(query);
 
     const [total, items] = await Promise.all([
       prisma.property.count({ where }),
       prisma.property.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [
+          { isFeatured: "desc" },
+          { featuredUntil: "desc" },
+          { createdAt: "desc" },
+        ],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         select: {
@@ -221,6 +260,8 @@ class PrismaPropertiesRepository implements PropertiesRepository {
           location: true,
           rooms: true,
           type: true,
+          isFeatured: true,
+          featuredUntil: true,
         },
       }),
     ]);
@@ -246,8 +287,10 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         rooms: true,
         type: true,
         isScraped: true,
+        isFeatured: true,
+        featuredUntil: true,
         createdAt: true,
-        owner: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true, phone: true } },
       },
     });
   }
@@ -266,9 +309,35 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         rooms: true,
         type: true,
         isScraped: true,
+        isFeatured: true,
+        featuredUntil: true,
         status: true,
         createdAt: true,
         ownerId: true,
+        owner: { select: { id: true, name: true, phone: true } },
+      },
+    });
+  }
+
+  async listOwnerProperties(ownerId: string) {
+    return prisma.property.findMany({
+      where: { ownerId },
+      orderBy: [{ isFeatured: "desc" }, { featuredUntil: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        location: true,
+        price: true,
+        type: true,
+        rooms: true,
+        images: true,
+        isScraped: true,
+        isFeatured: true,
+        featuredUntil: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
       },
     });
   }
@@ -331,6 +400,23 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       data: {
         ...input,
         price: input.price !== undefined ? input.price : undefined,
+      },
+    });
+  }
+
+  async markPropertyAsFeatured(id: string, featuredUntil: Date) {
+    return prisma.property.update({
+      where: { id },
+      data: {
+        isFeatured: true,
+        featuredUntil,
+      },
+      select: {
+        id: true,
+        ownerId: true,
+        isFeatured: true,
+        featuredUntil: true,
+        updatedAt: true,
       },
     });
   }

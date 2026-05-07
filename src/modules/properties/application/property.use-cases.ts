@@ -1,6 +1,7 @@
 import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  PaymentOrder,
   PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,
@@ -8,8 +9,13 @@ import type {
 } from "@/modules/properties/domain/property.types";
 import { propertiesRepository } from "@/modules/properties/infrastructure/property.repository";
 import { GetRecommendedPropertiesUseCase } from "@/modules/properties/application/get-recommended-properties.use-case";
+import {
+  FeaturePropertyUseCase,
+  type FeaturePropertyResult,
+} from "@/modules/properties/application/feature-property.use-case";
 
 const getRecommendedPropertiesUseCase = new GetRecommendedPropertiesUseCase(propertiesRepository);
+const featurePropertyUseCase = new FeaturePropertyUseCase(propertiesRepository);
 
 const searchProperties = (filters: PropertySearchFilters): Promise<PropertySearchResult> => {
   return propertiesRepository.searchProperties(filters);
@@ -39,6 +45,10 @@ const getPropertyById = (id: string) => {
   return propertiesRepository.getPropertyById(id);
 };
 
+const listOwnerProperties = (ownerId: string) => {
+  return propertiesRepository.listOwnerProperties(ownerId);
+};
+
 const listAdminProperties = () => {
   return propertiesRepository.listAdminProperties();
 };
@@ -59,6 +69,13 @@ const listPropertyOptions = () => {
   return propertiesRepository.listPropertyOptions();
 };
 
+const featureProperty = (input: {
+  propertyId: string;
+  ownerId: string;
+}): Promise<FeaturePropertyResult> => {
+  return featurePropertyUseCase.execute(input);
+};
+
 export const propertiesUseCases = {
   searchProperties,
   listPublicProperties,
@@ -66,16 +83,19 @@ export const propertiesUseCases = {
   getRecommendedProperties,
   getPublicPropertyById,
   getPropertyById,
+  listOwnerProperties,
   listAdminProperties,
   createAdminProperty,
   updateAdminProperty,
   deleteAdminProperty,
   listPropertyOptions,
+  featureProperty,
 };
 
 export type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  PaymentOrder,
   PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,

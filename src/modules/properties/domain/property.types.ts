@@ -29,6 +29,8 @@ export interface PropertySearchItem {
   price: number | string;
   location: string;
   rooms: number;
+  isFeatured: boolean;
+  featuredUntil: Date | null;
 }
 
 export interface PropertySearchResult {
@@ -48,6 +50,17 @@ export interface PublicPropertyListQuery {
   city?: string;
   minPrice?: number;
   maxPrice?: number;
+}
+
+export interface PaymentOrder {
+  id: string;
+  propertyId: string;
+  ownerId: string;
+  amount: number;
+  currency: "COP";
+  status: "PENDING" | "PAID" | "FAILED";
+  createdAt: Date;
+  paidAt: Date | null;
 }
 
 export interface PublicPropertyCountQuery {

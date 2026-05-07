@@ -22,6 +22,8 @@ export interface PropertiesRepository {
       location: string;
       rooms: number | null;
       type: string;
+      isFeatured: boolean;
+      featuredUntil: Date | null;
     }>;
   }>;
   countPublicProperties(query: PublicPropertyCountQuery): Promise<number>;
@@ -35,8 +37,10 @@ export interface PropertiesRepository {
     rooms: number | null;
     type: string;
     isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
     createdAt: Date;
-    owner: { id: string; name: string | null } | null;
+    owner: { id: string; name: string | null; phone: string | null } | null;
   } | null>;
   getPropertyById(id: string): Promise<{
     id: string;
@@ -49,10 +53,29 @@ export interface PropertiesRepository {
     rooms: number | null;
     type: string;
     isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
     status: PropertyStatus;
     createdAt: Date;
     ownerId: string | null;
+    owner: { id: string; name: string | null; phone: string | null } | null;
   } | null>;
+  listOwnerProperties(ownerId: string): Promise<Array<{
+    id: string;
+    title: string;
+    description: string;
+    location: string;
+    price: { toString(): string };
+    type: string;
+    rooms: number | null;
+    images: string[];
+    isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
+    status: PropertyStatus;
+    ownerId: string | null;
+    createdAt: Date;
+  }>>;
   listAdminProperties(): Promise<Array<{
     id: string;
     title: string;
@@ -63,6 +86,8 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
     status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
@@ -78,6 +103,8 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
     status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
@@ -93,9 +120,21 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
     status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
+  }>;
+  markPropertyAsFeatured(
+    id: string,
+    featuredUntil: Date,
+  ): Promise<{
+    id: string;
+    ownerId: string | null;
+    isFeatured: boolean;
+    featuredUntil: Date | null;
+    updatedAt: Date;
   }>;
   updatePropertyStatus(
     id: string,
