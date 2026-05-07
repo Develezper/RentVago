@@ -263,6 +263,14 @@ class PrismaPropertiesRepository implements PropertiesRepository {
     });
   }
 
+  async updatePropertyStatus(id: string, status: PropertyStatus) {
+    return prisma.property.update({
+      where: { id },
+      data: { status },
+      select: { id: true, status: true },
+    });
+  }
+
   async deleteAdminProperty(id: string): Promise<void> {
     await prisma.property.delete({ where: { id } });
   }
