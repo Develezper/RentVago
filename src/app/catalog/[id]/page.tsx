@@ -1,8 +1,40 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowLeft, MapPin, BedDouble, Tag } from "lucide-react";
 import { PropertyImageCarousel } from "@/components/ui/property-image-carousel";
+import { ACCESS_COOKIE_NAME } from "@/lib/auth-cookies";
+import { verifyAccessToken } from "@/lib/jwt";
+import { ContactOwnerButton } from "./contact-owner-button";
+
+const DEFAULT_WHATSAPP_NUMBER = "573001112233";
+
+const resolveAuthenticatedUserId = async (): Promise<string | null> => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  try {
+    const payload = await verifyAccessToken(accessToken);
+    return payload.sub;
+  } catch {
+    return null;
+  }
+};
+
+const resolveWhatsappNumber = (): string => {
+  const configuredValue =
+    process.env.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER ??
+    process.env.RENTVAGO_WHATSAPP_NUMBER ??
+    DEFAULT_WHATSAPP_NUMBER;
+
+  const normalized = configuredValue.replace(/\D/g, "");
+  return normalized.length > 0 ? normalized : DEFAULT_WHATSAPP_NUMBER;
+};
 
 export default async function CatalogPropertyPage({
   params,
@@ -11,9 +43,15 @@ export default async function CatalogPropertyPage({
 }) {
   const { id } = await params;
 
-  const property = await propertiesUseCases.getPublicPropertyById(id);
+  const [property, userId] = await Promise.all([
+    propertiesUseCases.getPublicPropertyById(id),
+    resolveAuthenticatedUserId(),
+  ]);
 
   if (!property) notFound();
+
+  const hasContactableOwner = property.owner?.id != null;
+  const whatsappNumber = resolveWhatsappNumber();
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -83,24 +121,43 @@ export default async function CatalogPropertyPage({
           )}
 
           <div className="pt-6 border-t border-gray-800">
-            <p className="text-gray-500 text-sm mb-4">
-              Inicia sesión para contactar al propietario y guardar esta propiedad en tus
-              favoritos.
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              <Link
-                href="/login"
-                className="bg-green-500 text-black font-extrabold px-6 py-3 rounded-2xl hover:bg-green-400 transition-colors"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                href="/register"
-                className="border border-gray-700 text-gray-300 font-semibold px-6 py-3 rounded-2xl hover:border-green-500 hover:text-green-400 transition-colors"
-              >
-                Crear cuenta
-              </Link>
-            </div>
+            {userId === null ? (
+              <>
+                <p className="text-gray-500 text-sm mb-4">
+                  Inicia sesión para contactar al propietario y guardar esta propiedad en tus
+                  favoritos.
+                </p>
+                <div className="flex gap-3 flex-wrap">
+                  <Link
+                    href="/login"
+                    className="bg-green-500 text-black font-extrabold px-6 py-3 rounded-2xl hover:bg-green-400 transition-colors"
+                  >
+                    Iniciar sesión
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="border border-gray-700 text-gray-300 font-semibold px-6 py-3 rounded-2xl hover:border-green-500 hover:text-green-400 transition-colors"
+                  >
+                    Crear cuenta
+                  </Link>
+                </div>
+              </>
+            ) : hasContactableOwner ? (
+              <>
+                <p className="text-gray-500 text-sm mb-4">
+                  Contacta por WhatsApp y registra este interés como lead para seguimiento.
+                </p>
+                <ContactOwnerButton
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  whatsappNumber={whatsappNumber}
+                />
+              </>
+            ) : (
+              <p className="text-amber-300 text-sm rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                Esta propiedad no tiene un propietario disponible para contacto directo.
+              </p>
+            )}
           </div>
         </div>
       </div>

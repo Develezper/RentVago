@@ -57,16 +57,18 @@ type PropertiesByCityRow = {
 
 class PrismaAdminRepository implements AdminRepository {
   async getStats(): Promise<AdminStats> {
-    const [activeUsers, totalProperties, totalLeases] = await Promise.all([
+    const [activeUsers, totalProperties, totalLeases, totalLeads] = await Promise.all([
       prisma.user.count({ where: { isActive: true } }),
       prisma.property.count(),
       prisma.lease.count({ where: { status: LeaseStatus.ACTIVO } }),
+      prisma.lead.count(),
     ]);
 
     return {
       activeUsers,
       totalProperties,
       totalLeases,
+      totalLeads,
     };
   }
 

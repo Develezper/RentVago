@@ -4,7 +4,7 @@ import type { LeadRepository } from "@/modules/leads/domain/lead.repository";
 
 class PrismaLeadRepository implements LeadRepository {
   async findPropertyLeadTarget(propertyId: string) {
-    return prisma.property.findUnique({
+    return prisma.property.findFirst({
       where: { id: propertyId, status: PropertyStatus.AVAILABLE },
       select: {
         id: true,

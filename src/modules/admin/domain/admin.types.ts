@@ -4,6 +4,7 @@ export interface AdminStats {
   activeUsers: number;
   totalProperties: number;
   totalLeases: number;
+  totalLeads: number;
 }
 
 export interface AdminDashboardMetrics {

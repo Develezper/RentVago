@@ -1,7 +1,15 @@
 import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import DashboardCharts from "@/components/admin/DashboardCharts";
 import Link from "next/link";
-import { Home, Users, BarChart2, BellRing, TrendingUp, MapPin } from "lucide-react";
+import {
+  Home,
+  Users,
+  BarChart2,
+  BellRing,
+  TrendingUp,
+  MapPin,
+  MessageCircleMore,
+} from "lucide-react";
 
 export default async function AdminPage() {
   const [stats, metrics, businessStats] = await Promise.all([
@@ -19,7 +27,7 @@ export default async function AdminPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-12">
         <Link
           href="/admin/properties"
           className="bg-black p-8 rounded-2xl border border-gray-800 relative overflow-hidden group hover:border-gray-700 transition-colors block"
@@ -74,6 +82,17 @@ export default async function AdminPage() {
             {businessStats.matchRate.triggeredThisMonth} alertas disparadas / {" "}
             {businessStats.matchRate.activeAlerts} activas
           </p>
+        </div>
+
+        <div className="bg-black p-8 rounded-2xl border border-gray-800 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full blur-3xl opacity-10" />
+          <div className="flex items-center gap-3 mb-4 relative z-10">
+            <MessageCircleMore className="w-5 h-5 text-gray-500" />
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+              Leads Generados
+            </p>
+          </div>
+          <p className="text-5xl font-black text-emerald-300 relative z-10">{stats.totalLeads}</p>
         </div>
       </div>
 
