@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
 } from "@/lib/api-auth";
 import { parsePropertySearchQuery } from "@/lib/property-search-query";
-import { searchService } from "@/services/search.service";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const params = request.nextUrl.searchParams;
     const filters = parsePropertySearchQuery(params, { defaultPageSize: 12 });
-    const results = await searchService.searchProperties(filters);
+    const results = await propertiesUseCases.searchProperties(filters);
 
     return NextResponse.json(
       {

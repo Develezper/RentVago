@@ -12,7 +12,7 @@ import {
 } from "@/lib/api-auth";
 import type { Role } from "@/generated/prisma/enums";
 import { verifyAccessToken } from "@/lib/jwt";
-import { authService } from "@/services/auth.service";
+import { authUseCases } from "@/modules/auth/application/auth.use-cases";
 import { errors as joseErrors } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -103,19 +103,19 @@ const withAuthHeaders = (
 
 const inFlightRefresh = new Map<
   string,
-  Promise<Awaited<ReturnType<typeof authService.refresh>>>
+  Promise<Awaited<ReturnType<typeof authUseCases.refresh>>>
 >();
 
 const getOrCreateRefreshPromise = (
   refreshToken: string,
-): Promise<Awaited<ReturnType<typeof authService.refresh>>> => {
+): Promise<Awaited<ReturnType<typeof authUseCases.refresh>>> => {
   const currentPromise = inFlightRefresh.get(refreshToken);
 
   if (currentPromise) {
     return currentPromise;
   }
 
-  const refreshPromise = authService
+  const refreshPromise = authUseCases
     .refresh(refreshToken)
     .finally(() => inFlightRefresh.delete(refreshToken));
 

@@ -1,4 +1,5 @@
-import { authService, AuthServiceError } from "@/services/auth.service";
+import { authUseCases } from "@/modules/auth/application/auth.use-cases";
+import { AuthServiceError } from "@/modules/auth/domain/auth.types";
 import {
   clearAuthCookies,
   REFRESH_COOKIE_NAME,
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Falta el token de refresco." }, { status: 401 });
     }
 
-    const result = await authService.refresh(refreshToken);
+    const result = await authUseCases.refresh(refreshToken);
     const response = NextResponse.json({ user: result.user }, { status: 200 });
     setAuthCookies(response, result.tokens);
     return response;

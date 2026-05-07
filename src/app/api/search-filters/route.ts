@@ -3,7 +3,7 @@ import {
   AuthorizationError,
   requireAuthenticatedUser,
 } from "@/lib/api-auth";
-import { searchFilterService } from "@/services/search-filter.service";
+import { searchFilterUseCases } from "@/modules/properties/application/search-filter.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -52,7 +52,7 @@ const saveSearchFilterSchema = z
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const authenticatedUser = await requireAuthenticatedUser(request);
-    const filters = await searchFilterService.listForUser(authenticatedUser.userId);
+    const filters = await searchFilterUseCases.listForUser(authenticatedUser.userId);
     return NextResponse.json({ data: filters }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const authenticatedUser = await requireAuthenticatedUser(request);
     const body: unknown = await request.json();
     const payload = saveSearchFilterSchema.parse(body);
-    const saved = await searchFilterService.createForUser(authenticatedUser.userId, payload);
+    const saved = await searchFilterUseCases.createForUser(authenticatedUser.userId, payload);
     return NextResponse.json({ data: saved }, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);

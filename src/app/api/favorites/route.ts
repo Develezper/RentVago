@@ -3,7 +3,10 @@ import {
   AuthorizationError,
   requireAuthenticatedUser,
 } from "@/lib/api-auth";
-import { favoriteService, FavoriteServiceError } from "@/services/favorite.service";
+import {
+  favoritesUseCases,
+  FavoriteServiceError,
+} from "@/modules/properties/application/favorite.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -14,7 +17,7 @@ const toggleFavoriteSchema = z.object({ propertyId: z.string().uuid() }).strict(
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const authenticatedUser = await requireAuthenticatedUser(request);
-    const favorites = await favoriteService.getUserFavorites(authenticatedUser.userId);
+    const favorites = await favoritesUseCases.getUserFavorites(authenticatedUser.userId);
 
     const serialized = favorites.map((fav) => ({
       id: fav.id,
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const authenticatedUser = await requireAuthenticatedUser(request);
     const body: unknown = await request.json();
     const payload = toggleFavoriteSchema.parse(body);
-    const result = await favoriteService.toggleFavorite(
+    const result = await favoritesUseCases.toggleFavorite(
       authenticatedUser.userId,
       payload.propertyId,
     );
