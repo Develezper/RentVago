@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -12,42 +12,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const minPrice = params.get("minPrice") ? parseFloat(params.get("minPrice")!) : undefined;
     const maxPrice = params.get("maxPrice") ? parseFloat(params.get("maxPrice")!) : undefined;
 
-    const where = {
-      AND: [
-        query.length > 0
-          ? {
-              OR: [
-                { title: { contains: query, mode: "insensitive" as const } },
-                { location: { contains: query, mode: "insensitive" as const } },
-              ],
-            }
-          : {},
-        minPrice !== undefined && !isNaN(minPrice) ? { price: { gte: minPrice } } : {},
-        maxPrice !== undefined && !isNaN(maxPrice) ? { price: { lte: maxPrice } } : {},
-      ],
-    };
+    const { total, items } = await propertiesUseCases.listPublicProperties({
+      page,
+      limit,
+      query,
+      minPrice,
+      maxPrice,
+    });
 
-    const [total, properties] = await Promise.all([
-      prisma.property.count({ where }),
-      prisma.property.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          images: true,
-          price: true,
-          location: true,
-          rooms: true,
-          type: true,
-        },
-      }),
-    ]);
-
-    const data = properties.map((p) => ({
+    const data = items.map((p) => ({
       ...p,
       price: p.price.toString(),
       imageUrl: p.images[0] ?? "",
