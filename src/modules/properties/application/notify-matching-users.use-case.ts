@@ -90,6 +90,18 @@ export class NotifyMatchingUsersUseCase {
       return typeMatches && cityMatches && priceMatches;
     });
 
+    if (matchingCandidates.length > 0) {
+      await this.searchFilterRepository.createMatchNotifications(
+        matchingCandidates.map((match) => ({
+          userId: match.userId,
+          filterId: match.filterId,
+          propertyId: property.id,
+          propertyTitle: property.title,
+          propertyLocation: property.location,
+        })),
+      );
+    }
+
     for (const match of matchingCandidates) {
       const requestedPropertyType = resolveRequestedPropertyType(match.query);
       const priceRangeLabel =

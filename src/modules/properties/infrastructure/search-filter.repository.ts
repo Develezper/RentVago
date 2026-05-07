@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { SearchFilterRepository } from "@/modules/properties/domain/search-filter.repository";
 import type {
+  MatchNotificationInput,
   SearchAlertCandidate,
   SaveSearchFilterInput,
   UserSearchFilter,
@@ -184,6 +185,21 @@ class PrismaSearchFilterRepository implements SearchFilterRepository {
     return filters
       .filter((candidate) => candidate.user.isActive)
       .map(mapSearchAlertCandidate);
+  }
+
+  async createMatchNotifications(input: MatchNotificationInput[]): Promise<number> {
+    if (input.length === 0) return 0;
+
+    const result = await prisma.notification.createMany({
+      data: input.map((entry) => ({
+        userId: entry.userId,
+        message:
+          `MATCH:${entry.propertyId}:${entry.filterId}: ` +
+          `Nueva propiedad \"${entry.propertyTitle}\" en ${entry.propertyLocation} coincide con tu alerta.`,
+      })),
+    });
+
+    return result.count;
   }
 }
 

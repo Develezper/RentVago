@@ -12,6 +12,42 @@ export interface AdminDashboardMetrics {
   leaseData: Array<{ name: string; value: number }>;
 }
 
+export interface AdminBusinessStatsSnapshot {
+  approvedProperties: number;
+  rejectedProperties: number;
+  pendingProperties: number;
+  scrapedProperties: number;
+  directProperties: number;
+  currentMonthProperties: number;
+  previousMonthProperties: number;
+  triggeredAlertsThisMonth: number;
+  activeAlerts: number;
+  hotZones: Array<{ zone: string; searches: number }>;
+}
+
+export interface AdminBusinessStats {
+  conversion: {
+    approved: number;
+    rejected: number;
+    pending: number;
+    totalReviewed: number;
+    approvalRate: number;
+    rejectionRate: number;
+  };
+  growth: {
+    currentMonth: number;
+    previousMonth: number;
+    growthRate: number;
+  };
+  propertyOriginData: Array<{ name: string; value: number }>;
+  matchRate: {
+    triggeredThisMonth: number;
+    activeAlerts: number;
+    rate: number;
+  };
+  hotZones: Array<{ zone: string; searches: number }>;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

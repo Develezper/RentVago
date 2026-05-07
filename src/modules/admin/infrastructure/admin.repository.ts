@@ -3,6 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AdminRepository } from "@/modules/admin/domain/admin.repository";
 import type {
+  AdminBusinessStatsSnapshot,
   AdminDashboardMetrics,
   AdminStats,
   AdminUser,
@@ -24,6 +25,29 @@ const leaseInclude = {
 type UserGrowthByMonthRow = {
   month_start: Date;
   total_users: bigint;
+};
+
+type BusinessPropertyStatsRow = {
+  approved_count: bigint;
+  rejected_count: bigint;
+  pending_count: bigint;
+  scraped_count: bigint;
+  direct_count: bigint;
+};
+
+type BusinessGrowthRow = {
+  current_month_count: bigint;
+  previous_month_count: bigint;
+};
+
+type HotZoneRow = {
+  zone: string;
+  searches: bigint;
+};
+
+type AlertsSummaryRow = {
+  triggered_alerts: bigint;
+  active_alerts: bigint;
 };
 
 class PrismaAdminRepository implements AdminRepository {
@@ -64,6 +88,87 @@ class PrismaAdminRepository implements AdminRepository {
         usuarios: Number(entry.total_users),
       })),
       leaseData: leaseStatus.map((row) => ({ name: row.status, value: row._count })),
+    };
+  }
+
+  async getBusinessStatsSnapshot(): Promise<AdminBusinessStatsSnapshot> {
+    const [
+      propertyStats,
+      growthStats,
+      hotZones,
+      alertsSummary,
+    ] = await Promise.all([
+      prisma.$queryRaw<BusinessPropertyStatsRow[]>(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE "isScraped" = false
+              AND "status" IN ('AVAILABLE'::"PropertyStatus", 'RENTED'::"PropertyStatus")
+          )::bigint AS approved_count,
+          COUNT(*) FILTER (
+            WHERE "isScraped" = false
+              AND "status" = 'DRAFT'::"PropertyStatus"
+          )::bigint AS rejected_count,
+          COUNT(*) FILTER (
+            WHERE "isScraped" = false
+              AND "status" = 'PENDING_REVIEW'::"PropertyStatus"
+          )::bigint AS pending_count,
+          COUNT(*) FILTER (WHERE "isScraped" = true)::bigint AS scraped_count,
+          COUNT(*) FILTER (WHERE "isScraped" = false)::bigint AS direct_count
+        FROM "Property"
+      `),
+      prisma.$queryRaw<BusinessGrowthRow[]>(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE "createdAt" >= date_trunc('month', now())
+              AND "createdAt" < date_trunc('month', now()) + interval '1 month'
+          )::bigint AS current_month_count,
+          COUNT(*) FILTER (
+            WHERE "createdAt" >= date_trunc('month', now()) - interval '1 month'
+              AND "createdAt" < date_trunc('month', now())
+          )::bigint AS previous_month_count
+        FROM "Property"
+      `),
+      prisma.$queryRaw<HotZoneRow[]>(Prisma.sql`
+        SELECT
+          initcap(lower(btrim("location"))) AS zone,
+          COUNT(*)::bigint AS searches
+        FROM "SearchFilter"
+        WHERE "location" IS NOT NULL
+          AND btrim("location") <> ''
+        GROUP BY 1
+        ORDER BY COUNT(*) DESC, zone ASC
+        LIMIT 3
+      `),
+      prisma.$queryRaw<AlertsSummaryRow[]>(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE "createdAt" >= date_trunc('month', now())
+              AND "createdAt" < date_trunc('month', now()) + interval '1 month'
+              AND "message" LIKE 'MATCH:%'
+          )::bigint AS triggered_alerts,
+          (SELECT COUNT(*)::bigint FROM "SearchFilter") AS active_alerts
+        FROM "Notification"
+      `),
+    ]);
+
+    const property = propertyStats[0];
+    const growth = growthStats[0];
+    const alerts = alertsSummary[0];
+
+    return {
+      approvedProperties: Number(property?.approved_count ?? 0n),
+      rejectedProperties: Number(property?.rejected_count ?? 0n),
+      pendingProperties: Number(property?.pending_count ?? 0n),
+      scrapedProperties: Number(property?.scraped_count ?? 0n),
+      directProperties: Number(property?.direct_count ?? 0n),
+      currentMonthProperties: Number(growth?.current_month_count ?? 0n),
+      previousMonthProperties: Number(growth?.previous_month_count ?? 0n),
+      triggeredAlertsThisMonth: Number(alerts?.triggered_alerts ?? 0n),
+      activeAlerts: Number(alerts?.active_alerts ?? 0n),
+      hotZones: hotZones.map((zone) => ({
+        zone: zone.zone,
+        searches: Number(zone.searches),
+      })),
     };
   }
 

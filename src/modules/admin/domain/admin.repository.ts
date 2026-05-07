@@ -1,5 +1,6 @@
 import type { Role } from "@/generated/prisma/enums";
 import type {
+  AdminBusinessStatsSnapshot,
   AdminDashboardMetrics,
   AdminStats,
   AdminUser,
@@ -15,6 +16,7 @@ import type {
 export interface AdminRepository {
   getStats(): Promise<AdminStats>;
   getDashboardMetrics(): Promise<AdminDashboardMetrics>;
+  getBusinessStatsSnapshot(): Promise<AdminBusinessStatsSnapshot>;
 
   getAllUsers(): Promise<AdminUser[]>;
   updateUserRole(userId: string, role: Role): Promise<void>;

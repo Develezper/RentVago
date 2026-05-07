@@ -1,4 +1,5 @@
 import type {
+  MatchNotificationInput,
   SearchAlertCandidate,
   SaveSearchFilterInput,
   UserSearchFilter,
@@ -17,4 +18,5 @@ export interface SearchFilterRepository {
   deleteByIdForUser(userId: string, id: string): Promise<boolean>;
   saveLatestForUser(userId: string, input: SaveSearchFilterInput): Promise<UserSearchFilter>;
   listAlertCandidates(): Promise<SearchAlertCandidate[]>;
+  createMatchNotifications(input: MatchNotificationInput[]): Promise<number>;
 }

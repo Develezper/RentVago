@@ -27,3 +27,11 @@ export interface SearchAlertCandidate {
   maxPrice: number | null;
   createdAt: Date;
 }
+
+export interface MatchNotificationInput {
+  userId: string;
+  filterId: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyLocation: string;
+}
