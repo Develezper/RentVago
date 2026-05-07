@@ -9,9 +9,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "db:generate": "bunx prisma generate",
     "db:migrate": "bunx prisma migrate dev",
     "db:push": "bunx prisma db push",
+    "db:seed": "bun run prisma/seed.ts",
+    "db:reset": "bunx prisma migrate reset --force --skip-seed --skip-generate && bun run db:generate && bun run db:seed",
     "user:promote": "bun run scripts/promote-user-role.ts"
   },
   "dependencies": {

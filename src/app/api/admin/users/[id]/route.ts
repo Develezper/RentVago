@@ -4,6 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
+import { Prisma } from "@/generated/prisma/client";
 import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
@@ -42,6 +43,9 @@ export async function PUT(
     return NextResponse.json({ data: { updated: true } }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Usuario no encontrado." }, { status: 404 });
+    }
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "El cuerpo JSON es inválido." }, { status: 400 });
     }

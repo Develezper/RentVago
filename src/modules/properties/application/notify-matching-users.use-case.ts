@@ -1,4 +1,5 @@
 import type { PropertyType } from "@/generated/prisma/enums";
+import { logger } from "@/lib/logger";
 import type { SearchFilterRepository } from "@/modules/properties/domain/search-filter.repository";
 
 interface PropertyAlertInput {
@@ -96,9 +97,15 @@ export class NotifyMatchingUsersUseCase {
           ? "cualquier precio"
           : `${match.minPrice ?? "0"} - ${match.maxPrice ?? "sin tope"}`;
 
-      console.log(
-        `Enviando alerta a ${match.userEmail} por match en ${property.title} (${property.id}). ciudad=${match.location ?? "cualquiera"}, tipo=${requestedPropertyType ?? "cualquiera"}, rango=${priceRangeLabel}, filtro=${match.filterId}`,
-      );
+      logger.info("Simulando envío de alerta por match de propiedad.", {
+        userEmail: match.userEmail,
+        propertyId: property.id,
+        propertyTitle: property.title,
+        city: match.location ?? "cualquiera",
+        propertyType: requestedPropertyType ?? "cualquiera",
+        priceRange: priceRangeLabel,
+        filterId: match.filterId,
+      });
     }
 
     return matchingCandidates.length;

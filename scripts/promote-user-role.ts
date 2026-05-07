@@ -18,9 +18,9 @@ const getTargetEmail = (): string => {
 
 const getTargetRole = (): Role => {
   const value = process.env.TARGET_ROLE?.trim().toUpperCase();
-  if (!value || value === "SUPERADMIN") return Role.SUPERADMIN;
-  if (value === "USER") return Role.USER;
-  throw new Error("TARGET_ROLE must be SUPERADMIN or USER.");
+  if (!value || value === "ADMIN") return Role.ADMIN;
+  if (value === "EMPLOYEE") return Role.EMPLOYEE;
+  throw new Error("TARGET_ROLE must be ADMIN or EMPLOYEE.");
 };
 
 const prisma = new PrismaClient({
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
     throw new Error(`User not found for email: ${email}`);
   }
 
-  console.log(`User role updated: ${email} -> ${role}`);
+  console.info(`User role updated: ${email} -> ${role}`);
 }
 
 main()

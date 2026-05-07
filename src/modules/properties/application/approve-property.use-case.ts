@@ -1,4 +1,5 @@
 import { PropertyStatus } from "@/generated/prisma/enums";
+import { logger } from "@/lib/logger";
 import { NotifyMatchingUsersUseCase } from "@/modules/properties/application/notify-matching-users.use-case";
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 
@@ -40,7 +41,10 @@ export class ApprovePropertyUseCase {
           price: existingProperty.price,
         });
       } catch (error: unknown) {
-        console.error("No fue posible enviar alertas de matching.", error);
+        logger.error("No fue posible enviar alertas de matching.", {
+          propertyId: existingProperty.id,
+          error: error instanceof Error ? error.message : "unknown-error",
+        });
       }
     }
 

@@ -4,6 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
+import { Prisma } from "@/generated/prisma/client";
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
@@ -43,6 +44,9 @@ export async function PUT(
     );
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Propiedad no encontrada." }, { status: 404 });
+    }
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "El cuerpo JSON es inválido." }, { status: 400 });
     }
@@ -68,6 +72,9 @@ export async function DELETE(
     return NextResponse.json({ data: { deleted: true } }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "Propiedad no encontrada." }, { status: 404 });
+    }
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
   }
 }
