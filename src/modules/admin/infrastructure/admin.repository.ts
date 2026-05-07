@@ -50,6 +50,11 @@ type AlertsSummaryRow = {
   active_alerts: bigint;
 };
 
+type PropertiesByCityRow = {
+  city_name: string;
+  property_count: bigint;
+};
+
 class PrismaAdminRepository implements AdminRepository {
   async getStats(): Promise<AdminStats> {
     const [activeUsers, totalProperties, totalLeases] = await Promise.all([
@@ -97,6 +102,7 @@ class PrismaAdminRepository implements AdminRepository {
       growthStats,
       hotZones,
       alertsSummary,
+      propertiesByCity,
     ] = await Promise.all([
       prisma.$queryRaw<BusinessPropertyStatsRow[]>(Prisma.sql`
         SELECT
@@ -149,6 +155,17 @@ class PrismaAdminRepository implements AdminRepository {
           (SELECT COUNT(*)::bigint FROM "SearchFilter") AS active_alerts
         FROM "Notification"
       `),
+      prisma.$queryRaw<PropertiesByCityRow[]>(Prisma.sql`
+        SELECT
+          CASE
+            WHEN "city" IS NULL OR btrim("city") = '' THEN 'Sin ciudad'
+            ELSE initcap(lower(btrim("city")))
+          END AS city_name,
+          COUNT(*)::bigint AS property_count
+        FROM "Property"
+        GROUP BY 1
+        ORDER BY COUNT(*) DESC, city_name ASC
+      `),
     ]);
 
     const property = propertyStats[0];
@@ -169,6 +186,10 @@ class PrismaAdminRepository implements AdminRepository {
       hotZones: hotZones.map((zone) => ({
         zone: zone.zone,
         searches: toSafeNumber(zone.searches),
+      })),
+      propertiesByCity: propertiesByCity.map((cityRow) => ({
+        city: cityRow.city_name,
+        properties: toSafeNumber(cityRow.property_count),
       })),
     };
   }

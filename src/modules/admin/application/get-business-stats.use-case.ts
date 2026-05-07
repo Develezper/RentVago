@@ -46,6 +46,7 @@ export class GetBusinessStatsUseCase {
         rate: toPercentage(snapshot.triggeredAlertsThisMonth, snapshot.activeAlerts),
       },
       hotZones: snapshot.hotZones,
+      propertiesByCity: snapshot.propertiesByCity,
     };
   }
 }

@@ -133,6 +133,38 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      <section className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+            Propiedades por ciudad
+          </h2>
+          <span className="text-xs text-gray-500">Captacion geográfica</span>
+        </div>
+
+        {businessStats.propertiesByCity.length === 0 ? (
+          <p className="text-sm text-gray-500">No hay datos de ciudades para mostrar.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 text-left text-xs uppercase tracking-[0.12em] text-gray-500">
+                  <th className="px-3 py-2 font-semibold">Ciudad</th>
+                  <th className="px-3 py-2 font-semibold">Propiedades</th>
+                </tr>
+              </thead>
+              <tbody>
+                {businessStats.propertiesByCity.map((entry) => (
+                  <tr key={entry.city} className="border-b border-gray-900/70">
+                    <td className="px-3 py-2 text-gray-200">{entry.city}</td>
+                    <td className="px-3 py-2 font-bold text-green-400">{entry.properties}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <DashboardCharts data={metrics} originData={businessStats.propertyOriginData} />
     </div>
   );

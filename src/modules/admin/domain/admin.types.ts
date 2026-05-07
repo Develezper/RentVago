@@ -23,6 +23,7 @@ export interface AdminBusinessStatsSnapshot {
   triggeredAlertsThisMonth: number;
   activeAlerts: number;
   hotZones: Array<{ zone: string; searches: number }>;
+  propertiesByCity: Array<{ city: string; properties: number }>;
 }
 
 export interface AdminBusinessStats {
@@ -46,6 +47,7 @@ export interface AdminBusinessStats {
     rate: number;
   };
   hotZones: Array<{ zone: string; searches: number }>;
+  propertiesByCity: Array<{ city: string; properties: number }>;
 }
 
 export interface AdminUser {

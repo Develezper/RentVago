@@ -218,7 +218,6 @@ export const toFilterState = (saved: SavedSearchFilterItem): FilterState => ({
 
 export const toSaveSearchFilterPayload = (filters: FilterState) => {
   const query = filters.query.trim();
-  const city = filters.city.trim();
   const location = filters.location.trim();
   const minPriceRaw = filters.minPrice.trim();
   const maxPriceRaw = filters.maxPrice.trim();

@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { CitySelector } from "@/components/ui/CitySelector";
 
 type PropertyTypeOption = "CASA" | "APARTAMENTO";
 
@@ -17,7 +18,7 @@ interface FormState {
 const initialFormState: FormState = {
   title: "",
   description: "",
-  city: "",
+  city: "medellin",
   type: "APARTAMENTO",
   price: "",
 };
@@ -127,18 +128,13 @@ export function NewPropertyForm() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2">
-            <label htmlFor="city" className="text-sm font-semibold text-gray-300">
-              Ciudad
-            </label>
-            <input
+            <CitySelector
               id="city"
-              type="text"
+              label="Sede"
               value={form.city}
-              onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
-              className="w-full bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Ej: Medellin"
-              maxLength={120}
-              required
+              includeAllOption={false}
+              className="space-y-2"
+              onChange={(value) => setForm((prev) => ({ ...prev, city: value }))}
             />
           </div>
 
