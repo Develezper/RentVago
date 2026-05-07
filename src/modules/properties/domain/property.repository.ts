@@ -6,6 +6,7 @@ import type {
   PropertySearchResult,
   PublicPropertyListQuery,
 } from "./property.types";
+import type { PropertyStatus } from "@/generated/prisma/enums";
 
 export interface PropertiesRepository {
   searchProperties(filters: PropertySearchFilters): Promise<PropertySearchResult>;
@@ -58,6 +59,7 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
     owner: { id: string; name: string | null; email: string } | null;
@@ -72,6 +74,7 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
   }>;
@@ -86,9 +89,14 @@ export interface PropertiesRepository {
     rooms: number | null;
     images: string[];
     isScraped: boolean;
+    status: PropertyStatus;
     ownerId: string | null;
     createdAt: Date;
   }>;
+  updatePropertyStatus(
+    id: string,
+    status: PropertyStatus,
+  ): Promise<{ id: string; status: PropertyStatus }>;
   deleteAdminProperty(id: string): Promise<void>;
   listPropertyOptions(): Promise<Array<{ id: string; title: string; location: string }>>;
 }
