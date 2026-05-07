@@ -264,6 +264,144 @@ const parsePriceAmount = (amount: string | undefined): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+type CityMapping = {
+  canonical: string;
+  aliases: string[];
+};
+
+const VALLE_DE_ABURRA_CITY_MAPPINGS: CityMapping[] = [
+  { canonical: "Medellín", aliases: ["medellin", "medellín"] },
+  { canonical: "Itagüí", aliases: ["itagui", "itagüi"] },
+  { canonical: "Sabaneta", aliases: ["sabaneta"] },
+  { canonical: "Envigado", aliases: ["envigado"] },
+];
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
+const normalizeSearchText = (value: string): string => {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+};
+
+const resolveCanonicalCity = (value: string): string | undefined => {
+  const normalized = normalizeSearchText(value);
+
+  for (const mapping of VALLE_DE_ABURRA_CITY_MAPPINGS) {
+    for (const alias of mapping.aliases) {
+      const aliasPattern = new RegExp(`\\b${escapeRegExp(alias)}\\b`, "i");
+      if (aliasPattern.test(normalized)) {
+        return mapping.canonical;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const parsePositiveInteger = (value: unknown): number | undefined => {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      return undefined;
+    }
+    const asInteger = Math.trunc(value);
+    return asInteger > 0 ? asInteger : undefined;
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/\d{1,2}/);
+    if (!match) {
+      return undefined;
+    }
+    const parsed = Number.parseInt(match[0], 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
+const getFirstPositiveInteger = (source: unknown, paths: string[]): number | undefined => {
+  for (const path of paths) {
+    const value = getNestedValue(source, path);
+    const parsed = parsePositiveInteger(value);
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+};
+
+const extractRoomsFromDescription = (description: string): number | undefined => {
+  const match = description.match(
+    /\b(\d{1,2})\s*(?:habitaciones?|alcobas?|piezas?|hab(?:\.|itaciones?)?)\b/i,
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+const normalizeLocationSegment = (value: string): string => {
+  return value.replace(/\s+/g, " ").replace(/^[,.:;\-]+|[,.:;\-]+$/g, "").trim();
+};
+
+const extractNeighborhoodFromDescription = (description: string): string | undefined => {
+  const patterns = [
+    /\bbarrio\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
+    /\bsector\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
+    /\burbanizaci[oó]n\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = description.match(pattern);
+    if (!match) {
+      continue;
+    }
+
+    const firstSegment = match[1].split(/[,;\n\r\.]/)[0] ?? "";
+    const normalized = normalizeLocationSegment(firstSegment);
+
+    if (normalized.length < 2) {
+      continue;
+    }
+
+    if (resolveCanonicalCity(normalized)) {
+      continue;
+    }
+
+    return normalized;
+  }
+
+  return undefined;
+};
+
+const composeLocationLabel = (
+  fallbackLocation: string,
+  city: string | undefined,
+  neighborhood: string | undefined,
+): string => {
+  if (neighborhood && city) {
+    return `${neighborhood}, ${city}`;
+  }
+
+  if (neighborhood) {
+    return neighborhood;
+  }
+
+  if (city) {
+    return city;
+  }
+
+  return fallbackLocation;
+};
+
 const getApifyApiToken = (): string => {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
@@ -323,14 +461,6 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         "custom_title",
         "title",
       ]);
-      const mappedCity =
-        getFirstNonEmptyString(item, [
-          "location.reverse_geocode.city",
-          "location.reverseGeocode.city",
-          "location.city",
-          "reverse_geocode.city",
-          "city",
-        ]) || normalizedCity;
       const rawDescription =
         getFirstNonEmptyText(item, [
           "description.text",
@@ -354,6 +484,60 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
           "description",
         ]) || title;
       const description = cleanDescription(rawDescription) || title;
+      const cityMetadataRaw = getFirstNonEmptyString(item, [
+        "location.reverse_geocode.city",
+        "location.reverseGeocode.city",
+        "location.city",
+        "reverse_geocode.city",
+        "city",
+      ]);
+      const fallbackLocation =
+        getFirstNonEmptyString(item, [
+          "location.reverse_geocode.name",
+          "location.reverseGeocode.name",
+          "location.name",
+          "location.full_name",
+          "location.fullName",
+          "marketplace_listing_location.name",
+          "marketplaceListingLocation.name",
+        ]) || cityMetadataRaw || normalizedCity;
+      const cityFromDescription = resolveCanonicalCity(description);
+      const cityFromMetadata = resolveCanonicalCity(cityMetadataRaw);
+      const cityFromSearch = resolveCanonicalCity(normalizedCity);
+      const fallbackCity = cityMetadataRaw || normalizedCity;
+      const mappedCity = cityFromDescription ?? cityFromMetadata ?? cityFromSearch ?? fallbackCity;
+      const neighborhoodFromMetadata = getFirstNonEmptyString(item, [
+        "location.reverse_geocode.neighborhood",
+        "location.reverseGeocode.neighborhood",
+        "location.neighborhood",
+        "reverse_geocode.neighborhood",
+        "neighborhood",
+        "location.reverse_geocode.borough",
+        "location.reverseGeocode.borough",
+      ]);
+      const neighborhoodFromDescription = extractNeighborhoodFromDescription(description);
+      const mappedNeighborhood =
+        neighborhoodFromDescription ??
+        (neighborhoodFromMetadata ? normalizeLocationSegment(neighborhoodFromMetadata) : undefined);
+      const roomsFromMetadata = getFirstPositiveInteger(item, [
+        "bedrooms",
+        "rooms",
+        "room_count",
+        "listing_details.bedrooms",
+        "listingDetails.bedrooms",
+        "listing_details.rooms",
+        "listingDetails.rooms",
+        "property_info.bedrooms",
+        "propertyInfo.bedrooms",
+        "attributes.bedrooms",
+        "features.bedrooms",
+      ]);
+      const mappedRooms = roomsFromMetadata ?? extractRoomsFromDescription(description);
+      const mappedLocation = composeLocationLabel(
+        normalizeLocationSegment(fallbackLocation),
+        mappedCity,
+        mappedNeighborhood,
+      );
       const imageUrls = collectListingImageUrls(item);
       const sourceUrl = getFirstNonEmptyString(item, [
         "itemUrl",
@@ -378,7 +562,10 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         title,
         description,
         price: parsePriceAmount(amount),
-        location: mappedCity,
+        location: mappedLocation,
+        city: mappedCity,
+        neighborhood: mappedNeighborhood,
+        rooms: mappedRooms,
         imageUrls,
         sourceUrl,
       } satisfies ScrapedPropertyInput;

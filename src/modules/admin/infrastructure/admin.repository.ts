@@ -325,7 +325,11 @@ class PrismaAdminRepository implements AdminRepository {
       title: input.title,
       description: input.description,
       price: input.price,
+      location: input.location,
       status: PropertyStatus.AVAILABLE,
+      ...(input.city ? { city: input.city } : {}),
+      ...(input.neighborhood ? { neighborhood: input.neighborhood } : {}),
+      ...(input.rooms !== undefined ? { rooms: input.rooms } : {}),
       // Evita borrar imágenes válidas cuando Apify no devuelve fotos en una corrida puntual.
       ...(images.length > 0 ? { images } : {}),
     };
@@ -338,6 +342,9 @@ class PrismaAdminRepository implements AdminRepository {
         description: input.description,
         price: input.price,
         location: input.location,
+        city: input.city,
+        neighborhood: input.neighborhood,
+        rooms: input.rooms,
         images,
         sourceUrl: input.sourceUrl,
         isScraped: true,
