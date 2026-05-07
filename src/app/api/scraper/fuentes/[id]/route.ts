@@ -13,8 +13,8 @@ export const runtime = "nodejs";
 
 const fuenteUpdateSchema = z
   .object({
-    nombre: z.string().min(1).max(200).optional(),
-    url: z.string().url().optional(),
+    nombre: z.string().trim().min(1).max(200).optional(),
+    url: z.string().trim().min(1).max(120).optional(),
     activo: z.boolean().optional(),
   })
   .strict()

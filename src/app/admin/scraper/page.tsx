@@ -6,7 +6,7 @@ export default async function AdminScraperPage() {
   const fuentes = raw.map((f) => ({
     id: f.id,
     nombre: f.nombre,
-    url: f.url,
+    city: f.url,
     activo: f.activo,
     creadoEn: f.creadoEn.toISOString(),
   }));

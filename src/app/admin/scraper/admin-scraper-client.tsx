@@ -2,9 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Trash2, Play, Plus, Globe } from "lucide-react";
+import { toast } from "sonner";
+import { Trash2, Play, Plus, Globe, Loader2 } from "lucide-react";
 
 interface Fuente {
+  id: string;
+  nombre: string;
+  city: string;
+  activo: boolean;
+  creadoEn: string;
+}
+
+interface RunResult {
+  source: string;
+  city: string;
+  fetched: number;
+  saved: number;
+  error?: string;
+}
+
+interface RunApiResponse {
+  sourceName: string;
+  city: string;
+  fetched: number;
+  saved: number;
+}
+
+interface FuenteApi {
   id: string;
   nombre: string;
   url: string;
@@ -12,19 +36,21 @@ interface Fuente {
   creadoEn: string;
 }
 
-interface RunResult {
-  source: string;
-  saved: number;
-  discarded: number;
-  error?: string;
-}
+const mapFuenteFromApi = (fuente: FuenteApi): Fuente => ({
+  id: fuente.id,
+  nombre: fuente.nombre,
+  city: fuente.url,
+  activo: fuente.activo,
+  creadoEn: fuente.creadoEn,
+});
 
 
 export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[] }) {
   const router = useRouter();
   const [fuentes, setFuentes] = useState(initialFuentes);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+  const [runningAll, setRunningAll] = useState(false);
+  const [runningSourceId, setRunningSourceId] = useState<string | null>(null);
   const [runResults, setRunResults] = useState<RunResult[] | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
@@ -65,11 +91,14 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
     setAddError(null);
     setAddingLoading(true);
     const fd = new FormData(e.currentTarget);
+    const city = (fd.get("city") as string).trim();
+
     const body = {
-      nombre: (fd.get("nombre") as string).trim(),
-      url: (fd.get("url") as string).trim(),
+      nombre: ((fd.get("nombre") as string).trim() || "Facebook").slice(0, 200),
+      url: city,
       activo: true,
     };
+
     try {
       const res = await fetch("/api/scraper/fuentes", {
         method: "POST",
@@ -85,8 +114,9 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
         throw new Error(msg);
       }
       router.refresh();
-      const created = (json as { data: Fuente }).data;
-      setFuentes((prev) => [created, ...prev]);
+      const created = (json as { data: FuenteApi }).data;
+      setFuentes((prev) => [mapFuenteFromApi(created), ...prev]);
+      toast.success(`Fuente Facebook agregada para ${city}.`);
       (e.target as HTMLFormElement).reset();
     } catch (err: unknown) {
       setAddError(err instanceof Error ? err.message : "Error inesperado.");
@@ -95,27 +125,93 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
     }
   };
 
-  const handleRunAll = async () => {
-    setRunning(true);
-    setRunResults(null);
+  const runSingleSource = async (fuente: Fuente): Promise<RunResult> => {
+    const res = await fetch("/api/scraper/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceName: "Facebook", city: fuente.city }),
+    });
+    const json: unknown = await res.json();
+    if (!res.ok) {
+      const msg =
+        json && typeof json === "object" && "error" in json
+          ? String((json as Record<string, unknown>).error)
+          : "Error al ejecutar el scraper.";
+      throw new Error(msg);
+    }
+
+    const data = (json as { data: RunApiResponse }).data;
+    return {
+      source: fuente.nombre,
+      city: data.city,
+      fetched: data.fetched,
+      saved: data.saved,
+    };
+  };
+
+  const handleRunSource = async (fuente: Fuente) => {
+    setRunningSourceId(fuente.id);
     setRunError(null);
     try {
-      const res = await fetch("/api/scraper/run", { method: "POST" });
-      const json: unknown = await res.json();
-      if (!res.ok) {
-        const msg =
-          json && typeof json === "object" && "error" in json
-            ? String((json as Record<string, unknown>).error)
-            : "Error al ejecutar el scraper.";
-        throw new Error(msg);
+      const result = await runSingleSource(fuente);
+      setRunResults((prev) => [result, ...(prev ?? [])]);
+      toast.success(`Se sincronizaron ${result.saved} propiedades para ${result.city}.`);
+      router.refresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error inesperado.";
+      setRunError(message);
+      toast.error(message);
+    } finally {
+      setRunningSourceId(null);
+    }
+  };
+
+  const handleRunAll = async () => {
+    const activeSources = fuentes.filter((source) => source.activo);
+    if (activeSources.length === 0) {
+      toast.error("No hay fuentes activas para ejecutar.");
+      return;
+    }
+
+    setRunningAll(true);
+    setRunResults(null);
+    setRunError(null);
+
+    try {
+      const results: RunResult[] = [];
+
+      for (const source of activeSources) {
+        try {
+          const result = await runSingleSource(source);
+          results.push(result);
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Error desconocido";
+          results.push({
+            source: source.nombre,
+            city: source.city,
+            fetched: 0,
+            saved: 0,
+            error: message,
+          });
+        }
       }
-      const results = (json as { data: RunResult[] }).data;
+
       setRunResults(results);
+
+      const totalSaved = results.reduce((acc, item) => acc + item.saved, 0);
+      const failed = results.filter((item) => item.error).length;
+
+      toast.success(`Sincronización finalizada: ${totalSaved} propiedades guardadas.`);
+      if (failed > 0) {
+        toast.error(`${failed} fuente(s) presentaron error durante la ejecución.`);
+      }
+
       router.refresh();
     } catch (err: unknown) {
       setRunError(err instanceof Error ? err.message : "Error inesperado.");
+      toast.error(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
-      setRunning(false);
+      setRunningAll(false);
     }
   };
 
@@ -145,9 +241,23 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-white text-sm">{fuente.nombre}</p>
-                  <p className="text-gray-500 text-xs truncate mt-0.5">{fuente.url}</p>
+                  <p className="text-gray-500 text-xs truncate mt-0.5">
+                    Ciudad: {fuente.city}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => handleRunSource(fuente)}
+                    disabled={runningAll || runningSourceId !== null}
+                    className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-green-500 text-black hover:bg-green-400 transition-colors disabled:opacity-50"
+                  >
+                    {runningSourceId === fuente.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5" />
+                    )}
+                    {runningSourceId === fuente.id ? "Scrapeando..." : "Ejecutar"}
+                  </button>
                   <button
                     onClick={() => handleToggle(fuente)}
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
@@ -181,14 +291,14 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
           <input
             name="nombre"
             required
-            placeholder="Nombre de la fuente"
+            defaultValue="Facebook"
+            placeholder="Facebook"
             className="flex-1 rounded-2xl bg-gray-900 border border-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
           />
           <input
-            name="url"
+            name="city"
             required
-            type="url"
-            placeholder="https://facebook.com/marketplace/..."
+            placeholder="Ciudad a buscar (Ej: Medellin, Envigado)"
             className="flex-1 rounded-2xl bg-gray-900 border border-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
           />
           <button
@@ -205,17 +315,21 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
       <div className="bg-black rounded-2xl border border-gray-800 p-8">
         <h2 className="text-lg font-black text-white mb-2">Ejecutar scraper</h2>
         <p className="text-gray-500 text-sm mb-6">
-          Ejecuta el scraper en todas las fuentes activas. Este proceso puede tardar varios
-          minutos dependiendo del número de fuentes.
+          Ejecuta el scraper en todas las fuentes activas o de forma individual. Este proceso
+          puede tardar varios segundos por ciudad.
         </p>
 
         <button
           onClick={handleRunAll}
-          disabled={running}
+          disabled={runningAll || runningSourceId !== null}
           className="flex items-center gap-2 bg-green-500 text-black font-extrabold px-6 py-3 rounded-2xl hover:bg-green-400 transition-colors disabled:opacity-50"
         >
-          <Play className="w-5 h-5" />
-          {running ? "Ejecutando... (puede tardar ~2 min por fuente)" : "Ejecutar todas las fuentes"}
+          {runningAll ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Play className="w-5 h-5" />
+          )}
+          {runningAll ? "Scrapeando..." : "Ejecutar todas las fuentes"}
         </button>
 
         {runError && (
@@ -241,7 +355,7 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
                   <p className="mt-1 text-xs">{r.error}</p>
                 ) : (
                   <p className="mt-1 text-xs">
-                    {r.saved} guardadas · {r.discarded} descartadas
+                    Ciudad: {r.city} · {r.saved} guardadas · {r.fetched} encontradas
                   </p>
                 )}
               </div>

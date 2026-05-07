@@ -47,6 +47,7 @@ Incluye:
 Usa `.env` o `.env.local` con al menos:
 - `DATABASE_URL` y/o `DIRECT_URL`
 - `JWT_SECRET` (mínimo 32 caracteres)
+- `APIFY_API_TOKEN` (token de Apify para el scraper de Facebook Marketplace)
 
 ## Docker
 

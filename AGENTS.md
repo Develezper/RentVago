@@ -64,6 +64,7 @@ enum Role {
 ### Scraper (Transición a Marketplace)
 - El scraper de Apify se dispara SOLO manualmente desde endpoints protegidos. NUNCA cron jobs.
 - La data raspada entra con estado `isScraped: true` para diferenciarla de las propiedades publicadas directamente por dueños legales.
+- Configurar `APIFY_API_TOKEN` en `.env` para autorizar llamadas al actor `apify~facebook-marketplace-scraper`.
 
 ### Diseño Visual (Estilo Kevin)
 - Tema oscuro: `bg-gray-950` fondo, `bg-black` cards, `green-500` acento.

@@ -12,8 +12,8 @@ export const runtime = "nodejs";
 
 const fuenteCreateSchema = z
   .object({
-    nombre: z.string().min(1).max(200),
-    url: z.string().url(),
+    nombre: z.string().trim().min(1).max(200),
+    url: z.string().trim().min(1).max(120),
     activo: z.boolean().default(true),
   })
   .strict();

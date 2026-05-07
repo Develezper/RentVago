@@ -4,7 +4,8 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
+import { runFacebookScraper } from "@/modules/admin/infrastructure/apify-facebook.service";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -12,7 +13,8 @@ export const runtime = "nodejs";
 
 const runSchema = z
   .object({
-    url: z.string().url().optional(),
+    sourceName: z.literal("Facebook"),
+    city: z.string().trim().min(1, "La ciudad es obligatoria."),
   })
   .strict();
 
@@ -29,14 +31,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const payload = runSchema.parse(body);
+    const scrapedData = await runFacebookScraper(payload.city);
+    const { saved } = await adminUseCases.upsertScrapedProperties(scrapedData);
 
-    if (payload.url) {
-      const result = await scraperUseCases.runScraping(payload.url);
-      return NextResponse.json({ data: [{ source: payload.url, ...result }] }, { status: 200 });
-    }
-
-    const results = await scraperUseCases.runScrapingAllSources();
-    return NextResponse.json({ data: results }, { status: 200 });
+    return NextResponse.json(
+      {
+        data: {
+          sourceName: payload.sourceName,
+          city: payload.city,
+          fetched: scrapedData.length,
+          saved,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
     if (error instanceof ZodError) {
