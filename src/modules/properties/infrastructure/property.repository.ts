@@ -386,7 +386,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         images: data.images ?? [],
         ownerId,
         isScraped: false,
-        status: PropertyStatus.PENDING_REVIEW,
+        status: PropertyStatus.AVAILABLE,
       },
       select: {
         id: true,
