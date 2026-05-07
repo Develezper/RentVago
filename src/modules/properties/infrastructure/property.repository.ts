@@ -1,7 +1,7 @@
 import { PropertyStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { resolveActiveCityByInput } from "@/modules/properties/domain/geography";
+import { getCityBySlug, resolveActiveCityByInput } from "@/modules/properties/domain/geography";
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 import type {
   AdminPropertyCreateInput,
@@ -278,7 +278,8 @@ class PrismaPropertiesRepository implements PropertiesRepository {
   }
 
   async createDirectProperty(data: CreatePropertyDTO, ownerId: string): Promise<{ id: string }> {
-    const composedLocation = [data.location.address, data.location.zone, data.location.city]
+    const cityName = getCityBySlug(data.location.city)?.name ?? data.location.city;
+    const composedLocation = [data.location.address, data.location.zone, cityName]
       .map((part) => (typeof part === "string" ? part.trim() : ""))
       .filter((part) => part.length > 0)
       .join(", ");
@@ -288,7 +289,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         title: data.title,
         description: data.description ?? "",
         location: composedLocation,
-        city: data.location.city,
+        city: cityName,
         neighborhood: data.location.zone,
         price: data.price,
         rooms: data.rooms,

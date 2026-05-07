@@ -58,7 +58,7 @@ export function SearchHero({
             type="text"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Ej: apartamento en Envigado con balcon"
+            placeholder="Ej: apartamento con balcon y parqueadero"
             className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
           <button
