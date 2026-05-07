@@ -1,4 +1,8 @@
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
+import {
+  ACTIVE_CITY_SLUGS,
+  resolveActiveCityByInput,
+} from "@/modules/properties/domain/geography";
 import type { CreatePropertyDTO } from "@/modules/properties/domain/property.types";
 import { normalizePositivePriceToNumber } from "@/modules/properties/infrastructure/price-helper";
 import { UploadPropertyImagesUseCase } from "@/modules/properties/application/upload-property-images.use-case";
@@ -21,12 +25,19 @@ const toOptionalNumber = (value: unknown): unknown => {
   return value;
 };
 
+const toActiveCitySlug = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim();
+  if (normalized.length === 0) return normalized;
+  return resolveActiveCityByInput(normalized)?.slug ?? normalized;
+};
+
 const createDirectPropertySchema = z
   .object({
     title: z.preprocess(asOptionalString, z.string().min(1).max(200)),
     description: z.preprocess(asOptionalString, z.string().max(5000).optional()),
     location: z.preprocess(asOptionalString, z.string().max(200).optional()),
-    city: z.preprocess(asOptionalString, z.string().min(1).max(120)),
+    city: z.preprocess(toActiveCitySlug, z.enum(ACTIVE_CITY_SLUGS)),
     neighborhood: z.preprocess(asOptionalString, z.string().max(120).optional()),
     price: z.preprocess(toOptionalNumber, z.number().positive().finite()),
     rooms: z.preprocess(toOptionalNumber, z.number().int().min(1).max(50).optional()),
@@ -52,9 +63,11 @@ export class CreateDirectPropertyUseCase {
     const data: CreatePropertyDTO = {
       title: payload.title,
       description: payload.description,
-      location: payload.location,
-      city: payload.city,
-      neighborhood: payload.neighborhood,
+      location: {
+        city: payload.city,
+        zone: payload.neighborhood,
+        address: payload.location,
+      },
       price: payload.price,
       rooms: payload.rooms,
       type: payload.type,

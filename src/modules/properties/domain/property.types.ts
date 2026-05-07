@@ -1,8 +1,16 @@
 import type { PropertyType } from "@/generated/prisma/enums";
+import type { ActiveCitySlug } from "@/modules/properties/domain/geography";
+
+export interface PropertyLocationInput {
+  city: ActiveCitySlug;
+  zone?: string;
+  address?: string;
+}
 
 export interface PropertySearchFilters {
   query?: string;
   location?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
   rooms?: number;
@@ -37,6 +45,7 @@ export interface PublicPropertyListQuery {
   page: number;
   limit: number;
   query?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
 }
@@ -55,9 +64,7 @@ export interface AdminPropertyCreateInput {
 export interface CreatePropertyDTO {
   title: string;
   description?: string;
-  location?: string;
-  city: string;
-  neighborhood?: string;
+  location: PropertyLocationInput;
   price: number;
   rooms?: number;
   type: PropertyType;

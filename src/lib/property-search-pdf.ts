@@ -46,6 +46,7 @@ const toPriceText = (value: unknown): string => {
 const buildFilterSummary = (filters: ParsedPropertySearchQuery): string => {
   const items = [
     filters.query ? `Busqueda: ${filters.query}` : null,
+    filters.city ? `Ciudad: ${filters.city}` : null,
     filters.location ? `Ubicacion: ${filters.location}` : null,
     filters.minPrice !== undefined ? `Precio min: ${toPriceText(filters.minPrice)}` : null,
     filters.maxPrice !== undefined ? `Precio max: ${toPriceText(filters.maxPrice)}` : null,

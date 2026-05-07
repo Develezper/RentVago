@@ -5,6 +5,7 @@ export type PropertySearchSort = "relevance" | "newest" | "priceAsc" | "priceDes
 export interface ParsedPropertySearchQuery {
   query?: string;
   location?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
   rooms?: number;
@@ -55,6 +56,7 @@ const createSearchQuerySchema = (defaultPageSize: number) => {
     .object({
       query: z.string().min(1).max(120).optional(),
       location: z.string().min(1).max(120).optional(),
+      city: z.string().min(1).max(80).optional(),
       minPrice: z.preprocess(
         toOptionalNumber,
         z.number().positive().finite().optional(),
@@ -103,6 +105,7 @@ export const parsePropertySearchQuery = (
   return schema.parse({
     query: asOptionalString(params.get("query")),
     location: asOptionalString(params.get("location")),
+    city: asOptionalString(params.get("city")),
     minPrice: params.get("minPrice") ?? undefined,
     maxPrice: params.get("maxPrice") ?? undefined,
     rooms: params.get("rooms") ?? undefined,
