@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { leaseService } from "@/services/lease.service";
+import { leaseUseCases } from "@/modules/admin/application/lease.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
-    const leases = await leaseService.getAllLeases();
+    const leases = await leaseUseCases.getAllLeases();
     const data = leases.map((l) => ({
       id: l.id,
       propertyId: l.propertyId,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = leaseCreateSchema.parse(body);
-    const created = await leaseService.createLease({
+    const created = await leaseUseCases.createLease({
       ...payload,
       startDate: new Date(payload.startDate),
       endDate: new Date(payload.endDate),
