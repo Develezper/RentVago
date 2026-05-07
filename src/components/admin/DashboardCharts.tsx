@@ -47,7 +47,7 @@ export default function DashboardCharts({
 
   if (!mounted) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 h-[300px] animate-pulse bg-white/5 rounded-2xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 h-75 animate-pulse bg-white/5 rounded-2xl" />
     );
   }
 
@@ -57,7 +57,7 @@ export default function DashboardCharts({
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
           Origen de Propiedades
         </h3>
-        <div className="h-[300px] w-full">
+        <div className="h-75 w-full">
           <ResponsiveContainer width="99%" height={300}>
             <BarChart data={originData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
@@ -87,7 +87,7 @@ export default function DashboardCharts({
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
           Estado de Arriendos
         </h3>
-        <div className="h-[300px] w-full">
+        <div className="h-75 w-full">
           <ResponsiveContainer width="99%" height={300}>
             <PieChart>
               <Pie
