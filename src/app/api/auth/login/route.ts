@@ -1,4 +1,5 @@
-import { authService, AuthServiceError } from "@/services/auth.service";
+import { authUseCases } from "@/modules/auth/application/auth.use-cases";
+import { AuthServiceError } from "@/modules/auth/domain/auth.types";
 import { setAuthCookies } from "@/lib/auth-cookies";
 import { loginSchema } from "@/lib/validators";
 import { ZodError } from "zod";
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body: unknown = await request.json();
     const payload = loginSchema.parse(body);
-    const result = await authService.login(payload);
+    const result = await authUseCases.login(payload);
 
     const response = NextResponse.json({ user: result.user }, { status: 200 });
     setAuthCookies(response, result.tokens);
