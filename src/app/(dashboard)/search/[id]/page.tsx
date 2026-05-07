@@ -84,7 +84,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
         <section className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
             <div
-              className="h-72 rounded-3xl bg-gradient-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center sm:h-96"
+              className="h-72 rounded-3xl bg-linear-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center sm:h-96"
               style={{
                 backgroundImage: primaryImage
                   ? `linear-gradient(to top, rgba(0,0,0,0.5), rgba(0,0,0,0.1)), url(${primaryImage})`
@@ -93,7 +93,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             />
             <div className="grid gap-3 sm:grid-rows-2">
               <div
-                className="h-36 rounded-2xl bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 bg-cover bg-center sm:h-auto"
+                className="h-36 rounded-2xl bg-linear-to-br from-gray-800 via-gray-800 to-gray-900 bg-cover bg-center sm:h-auto"
                 style={{
                   backgroundImage: secondaryImage
                     ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${secondaryImage})`
@@ -101,7 +101,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
                 }}
               />
               <div
-                className="h-36 rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 bg-cover bg-center sm:h-auto"
+                className="h-36 rounded-2xl bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 bg-cover bg-center sm:h-auto"
                 style={{
                   backgroundImage: tertiaryImage
                     ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${tertiaryImage})`
