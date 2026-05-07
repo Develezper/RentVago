@@ -91,6 +91,9 @@ model Property {
   @@index([city, type, price])
   @@index([neighborhood, city])
   @@index([status, isScraped])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([isScraped, createdAt])
 }
 
 // NOTA Full-Text Search (PostgreSQL):
@@ -145,6 +148,7 @@ model Notification {
 
   @@index([userId])
   @@index([userId, isRead])
+  @@index([createdAt])
 }
 
 // ─── SearchFilter ────────────────────────────────────────────────────────────
@@ -163,6 +167,8 @@ model SearchFilter {
 
   @@index([userId])
   @@index([userId, createdAt])
+  @@index([location])
+  @@index([location, createdAt])
 }
 
 // ─── Favorite ────────────────────────────────────────────────────────────────

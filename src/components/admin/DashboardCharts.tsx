@@ -22,12 +22,22 @@ interface ChartDataItem {
 }
 
 export interface DashboardMetrics {
-  propertyData: ChartDataItem[];
   userData: Array<{ name: string; usuarios: number }>;
   leaseData: ChartDataItem[];
 }
 
-export default function DashboardCharts({ data }: { data: DashboardMetrics }) {
+interface OriginDataItem {
+  name: string;
+  value: number;
+}
+
+export default function DashboardCharts({
+  data,
+  originData,
+}: {
+  data: DashboardMetrics;
+  originData: OriginDataItem[];
+}) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -43,26 +53,26 @@ export default function DashboardCharts({ data }: { data: DashboardMetrics }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 w-full">
-      <div className="bg-black p-6 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+      <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
-          Distribución de Propiedades
+          Origen de Propiedades
         </h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="99%" height={300}>
-            <BarChart data={data.propertyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+            <BarChart data={originData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
               <XAxis
                 dataKey="name"
-                stroke="#555"
+                stroke="#9ca3af"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
               />
-              <YAxis stroke="#555" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#000",
-                  border: "1px solid #333",
+                  backgroundColor: "#111827",
+                  border: "1px solid #1f2937",
                   borderRadius: "12px",
                 }}
                 itemStyle={{ color: "#fff", fontSize: "12px" }}
@@ -73,7 +83,7 @@ export default function DashboardCharts({ data }: { data: DashboardMetrics }) {
         </div>
       </div>
 
-      <div className="bg-black p-6 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+      <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
           Estado de Arriendos
         </h3>
