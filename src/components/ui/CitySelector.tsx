@@ -65,22 +65,6 @@ export function CitySelector({
     return readPersistedCity(storageKey);
   });
 
-  useEffect(() => {
-    if (typeof value !== "string") return;
-    setInternalValue(isActiveCitySlug(value) ? value : "");
-  }, [value]);
-
-  useEffect(() => {
-    if (!persistSelection) return;
-    if (typeof value === "string" && value.trim().length > 0) return;
-
-    const persisted = readPersistedCity(storageKey);
-    if (persisted.length === 0 || persisted === internalValue) return;
-
-    setInternalValue(persisted);
-    onChange?.(persisted);
-  }, [internalValue, onChange, persistSelection, storageKey, value]);
-
   const selectedValue = useMemo(() => {
     if (typeof value === "string") {
       return isActiveCitySlug(value) ? value : "";
@@ -88,6 +72,16 @@ export function CitySelector({
 
     return internalValue;
   }, [internalValue, value]);
+
+  useEffect(() => {
+    if (!persistSelection) return;
+    if (typeof value === "string" && value.trim().length > 0) return;
+
+    const persisted = readPersistedCity(storageKey);
+    if (persisted.length === 0 || persisted === selectedValue) return;
+
+    onChange?.(persisted);
+  }, [onChange, persistSelection, selectedValue, storageKey, value]);
 
   const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextValue = event.target.value;

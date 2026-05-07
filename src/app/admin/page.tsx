@@ -145,7 +145,7 @@ export default async function AdminPage() {
           <p className="text-sm text-gray-500">No hay datos de ciudades para mostrar.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] text-sm">
+            <table className="w-full min-w-105 text-sm">
               <thead>
                 <tr className="border-b border-gray-800 text-left text-xs uppercase tracking-[0.12em] text-gray-500">
                   <th className="px-3 py-2 font-semibold">Ciudad</th>
