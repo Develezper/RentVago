@@ -1,0 +1,438 @@
+import { FormEvent } from "react";
+import Link from "next/link";
+import { FavoriteButton } from "@/components/ui/favorite-button";
+import {
+  currencyFormat,
+  FilterState,
+  PropertyItem,
+  SearchMeta,
+  SearchPageSize,
+  SearchSort,
+  ViewerRole,
+  pageSizeValues,
+  toNumericPrice,
+} from "./search-page.shared";
+
+interface SearchHeroProps {
+  query: string;
+  isSearchDisabled: boolean;
+  onQueryChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}
+
+export function SearchHero({
+  query,
+  isSearchDisabled,
+  onQueryChange,
+  onSubmit,
+}: SearchHeroProps) {
+  return (
+    <section className="rounded-3xl border border-gray-800 bg-black p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-400">
+            Valle de Aburra
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Busca inmuebles en minutos
+          </h1>
+          <p className="mt-1 text-sm text-gray-400">
+            Encuentra apartamentos, casas y lofts por zona, precio y habitaciones.
+          </p>
+        </div>
+
+        <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={onSubmit}>
+          <label htmlFor="query" className="sr-only">
+            Buscar propiedad
+          </label>
+          <input
+            id="query"
+            name="query"
+            type="text"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Ej: apartamento en Envigado con balcon"
+            className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          />
+          <button
+            type="submit"
+            disabled={isSearchDisabled}
+            className="h-12 rounded-2xl bg-green-500 px-6 text-sm font-extrabold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Buscar ahora
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+interface SearchFiltersPanelProps {
+  filters: FilterState;
+  isSavingSearchFilter: boolean;
+  hasInvalidPriceRange: boolean;
+  priceRangeValidationMessage: string;
+  saveSearchFilterMessage: string;
+  onPriceRangeBlur: () => void;
+  onFilterChange: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
+  onClearFilters: () => void;
+  onSaveSearchFilter: () => void;
+}
+
+export function SearchFiltersPanel({
+  filters,
+  isSavingSearchFilter,
+  hasInvalidPriceRange,
+  priceRangeValidationMessage,
+  saveSearchFilterMessage,
+  onPriceRangeBlur,
+  onFilterChange,
+  onClearFilters,
+  onSaveSearchFilter,
+}: SearchFiltersPanelProps) {
+  return (
+    <aside className="h-fit rounded-3xl border border-gray-800 bg-black p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-white">Filtros</h2>
+      <div className="mt-4 space-y-4">
+        <div className="space-y-2">
+          <label htmlFor="location" className="text-sm font-medium text-gray-400">
+            Ubicacion
+          </label>
+          <select
+            id="location"
+            name="location"
+            value={filters.location}
+            onChange={(event) => onFilterChange("location", event.target.value)}
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Todas las zonas</option>
+            <option value="Medellin">Medellin</option>
+            <option value="Envigado">Envigado</option>
+            <option value="Sabaneta">Sabaneta</option>
+            <option value="Bello">Bello</option>
+            <option value="Itagui">Itagui</option>
+            <option value="La Estrella">La Estrella</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label htmlFor="minPrice" className="text-sm font-medium text-gray-400">
+              Precio min
+            </label>
+            <input
+              id="minPrice"
+              name="minPrice"
+              type="number"
+              value={filters.minPrice}
+              onChange={(event) => onFilterChange("minPrice", event.target.value)}
+              onBlur={onPriceRangeBlur}
+              placeholder="1200000"
+              className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="maxPrice" className="text-sm font-medium text-gray-400">
+              Precio max
+            </label>
+            <input
+              id="maxPrice"
+              name="maxPrice"
+              type="number"
+              value={filters.maxPrice}
+              onChange={(event) => onFilterChange("maxPrice", event.target.value)}
+              onBlur={onPriceRangeBlur}
+              placeholder="5000000"
+              className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {hasInvalidPriceRange ? (
+          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
+            {priceRangeValidationMessage}
+          </p>
+        ) : null}
+
+        <div className="space-y-2">
+          <label htmlFor="rooms" className="text-sm font-medium text-gray-400">
+            Habitaciones
+          </label>
+          <select
+            id="rooms"
+            name="rooms"
+            value={filters.rooms}
+            onChange={(event) => onFilterChange("rooms", event.target.value)}
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Cualquiera</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="h-11 w-full rounded-2xl border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-400 transition hover:border-gray-600 hover:text-white"
+        >
+          Limpiar filtros
+        </button>
+
+        <button
+          type="button"
+          onClick={onSaveSearchFilter}
+          disabled={isSavingSearchFilter || hasInvalidPriceRange}
+          className="h-11 w-full rounded-2xl bg-green-500 px-4 text-sm font-extrabold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSavingSearchFilter ? "Guardando..." : "Guardar busqueda"}
+        </button>
+
+        {saveSearchFilterMessage ? (
+          <p className="rounded-2xl border border-green-500/20 bg-green-500/10 px-3 py-2 text-sm text-green-400">
+            {saveSearchFilterMessage}
+          </p>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+
+interface SearchResultsToolbarProps {
+  totalProperties: number;
+  viewerRole: ViewerRole;
+  pdfDownloadHref: string;
+  sort: SearchSort;
+  pageSize: SearchPageSize;
+  isLoading: boolean;
+  onSortChange: (value: SearchSort) => void;
+  onPageSizeChange: (value: SearchPageSize) => void;
+}
+
+export function SearchResultsToolbar({
+  totalProperties,
+  viewerRole,
+  pdfDownloadHref,
+  sort,
+  pageSize,
+  isLoading,
+  onSortChange,
+  onPageSizeChange,
+}: SearchResultsToolbarProps) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-black px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-gray-400">
+        <span className="font-semibold text-white">{totalProperties}</span> propiedades disponibles
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {viewerRole === "SUPERADMIN" ? (
+          <a
+            href={pdfDownloadHref}
+            className="inline-flex h-9 items-center rounded-lg border border-green-500/30 bg-green-500/10 px-3 text-sm font-medium text-green-400 transition hover:bg-green-500/20"
+          >
+            Descargar PDF
+          </a>
+        ) : null}
+        <label htmlFor="sort" className="text-sm font-medium text-gray-400">
+          Ordenar
+        </label>
+        <select
+          id="sort"
+          name="sort"
+          value={sort}
+          onChange={(event) => onSortChange(event.target.value as SearchSort)}
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+        >
+          <option value="relevance">Relevancia</option>
+          <option value="newest">Mas recientes</option>
+          <option value="priceAsc">Precio: menor a mayor</option>
+          <option value="priceDesc">Precio: mayor a menor</option>
+        </select>
+
+        <label htmlFor="pageSize" className="text-sm font-medium text-gray-400">
+          Mostrar
+        </label>
+        <select
+          id="pageSize"
+          name="pageSize"
+          value={String(pageSize)}
+          onChange={(event) => onPageSizeChange(Number(event.target.value) as SearchPageSize)}
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+        >
+          {pageSizeValues.map((size) => (
+            <option key={size} value={String(size)}>
+              {size}
+            </option>
+          ))}
+        </select>
+
+        {isLoading ? (
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-green-400">
+            Cargando...
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function SearchLoadingSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={`skeleton-${index}`}
+          className="animate-pulse overflow-hidden rounded-2xl border border-gray-800 bg-black shadow-sm"
+        >
+          <div className="h-36 bg-gray-800" />
+          <div className="space-y-3 p-4">
+            <div className="h-4 rounded bg-gray-800" />
+            <div className="h-4 w-2/3 rounded bg-gray-800" />
+            <div className="h-5 w-1/2 rounded bg-gray-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SearchEmptyState() {
+  return (
+    <div className="rounded-2xl border border-gray-800 bg-black px-4 py-10 text-center shadow-sm">
+      <p className="text-base font-medium text-white">
+        No encontramos propiedades con esos filtros.
+      </p>
+      <p className="mt-1 text-sm text-gray-400">
+        Ajusta el rango de precios o la ubicacion para ampliar resultados.
+      </p>
+    </div>
+  );
+}
+
+interface PropertyGridProps {
+  properties: PropertyItem[];
+  favoritePropertyIds: string[];
+  onFavoriteToggle?: (propertyId: string, isFavorite: boolean) => void;
+}
+
+export function PropertyGrid({
+  properties,
+  favoritePropertyIds,
+  onFavoriteToggle,
+}: PropertyGridProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {properties.map((property) => {
+        const isFavorite = favoritePropertyIds.includes(property.id);
+
+        return (
+          <article
+            key={property.id}
+            className="relative overflow-hidden rounded-2xl border border-gray-800 bg-black shadow-sm transition hover:-translate-y-0.5 hover:border-gray-700 hover:shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+          >
+            <FavoriteButton
+              key={`${property.id}-${isFavorite ? "1" : "0"}`}
+              propertyId={property.id}
+              initialIsFavorite={isFavorite}
+              onToggle={
+                onFavoriteToggle
+                  ? (nextFavorite) => onFavoriteToggle(property.id, nextFavorite)
+                  : undefined
+              }
+              className="absolute right-3 top-3 z-10"
+            />
+            <Link href={`/search/${property.id}`} className="block">
+              <div
+                className="relative h-36 bg-gradient-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
+                style={{
+                  backgroundImage: property.imageUrl
+                    ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${property.imageUrl})`
+                    : undefined,
+                }}
+              >
+                <span className="absolute bottom-3 left-3 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-gray-300">
+                  Propiedad
+                </span>
+              </div>
+            </Link>
+            <div className="space-y-3 p-4">
+              <div>
+                <h3 className="line-clamp-2 text-base font-semibold text-white">
+                  {property.title}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">{property.location}</p>
+              </div>
+
+              <p className="text-lg font-bold text-green-400">
+                {currencyFormat.format(toNumericPrice(property.price))}
+                <span className="ml-1 text-xs font-medium text-gray-500">/ mes</span>
+              </p>
+
+              <p className="line-clamp-2 text-sm text-gray-400">{property.description}</p>
+
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="rounded-full bg-gray-800 px-2.5 py-1">
+                  {property.rooms} hab
+                </span>
+              </div>
+
+              <div className="pt-1">
+                <Link
+                  href={`/search/${property.id}`}
+                  className="inline-flex h-9 items-center rounded-lg border border-gray-700 bg-gray-900 px-3 text-sm font-medium text-white transition hover:border-gray-600 hover:bg-gray-800"
+                >
+                  Ver detalle
+                </Link>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+interface SearchPaginationProps {
+  meta: SearchMeta;
+  isLoading: boolean;
+  currentPage: number;
+  onPrevious: () => void;
+  onNext: () => void;
+}
+
+export function SearchPagination({
+  meta,
+  isLoading,
+  currentPage,
+  onPrevious,
+  onNext,
+}: SearchPaginationProps) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-black px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-gray-400">
+        Pagina {meta.page} de {meta.totalPages}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={isLoading || currentPage <= 1}
+          className="h-9 rounded-lg border border-gray-700 bg-gray-900 px-3 text-sm font-medium text-gray-400 transition hover:border-gray-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={isLoading || currentPage >= meta.totalPages}
+          className="h-9 rounded-lg border border-gray-700 bg-gray-900 px-3 text-sm font-medium text-gray-400 transition hover:border-gray-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  );
+}

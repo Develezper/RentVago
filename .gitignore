@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — .env.example SÍ se commitea, los demás NO
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -52,5 +56,5 @@ docker_data/
 postgres_data/
 mysql_data/
 
-# Prisma
-/prisma/migrations 
+# Prisma — las migraciones SÍ se commitean; solo se excluye el cliente generado
+# /prisma/migrations  ← NO ignorar: las migraciones deben estar en git 
