@@ -18,7 +18,7 @@ export interface PropertiesRepository {
       title: string;
       description: string;
       images: string[];
-      price: number;
+      price: { toString(): string };
       location: string;
       rooms: number | null;
       type: string;
