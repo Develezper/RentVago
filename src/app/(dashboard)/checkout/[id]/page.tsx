@@ -2,7 +2,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { resolveAuthenticatedUserFromHeaders } from "@/lib/api-auth";
+import { createFeatureCheckoutToken } from "@/modules/properties/application/feature-checkout-token";
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
+import { FEATURED_PROPERTY_PRICE_COP } from "@/modules/properties/domain/feature.constants";
 import { ConfirmFeaturePaymentButton } from "./confirm-feature-payment-button";
 
 interface CheckoutPageProps {
@@ -14,8 +16,6 @@ const currencyFormat = new Intl.NumberFormat("es-CO", {
   currency: "COP",
   maximumFractionDigits: 0,
 });
-
-const FEATURED_PRICE = 59000;
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const requestHeaders = await headers();
@@ -31,6 +31,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   if (!property || property.ownerId !== authenticatedUser.userId) {
     notFound();
   }
+
+  const checkoutToken = await createFeatureCheckoutToken({
+    propertyId: property.id,
+    ownerId: authenticatedUser.userId,
+    amount: FEATURED_PROPERTY_PRICE_COP,
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -54,7 +60,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <p className="text-sm font-semibold text-white">{property.title}</p>
           <p className="mt-1 text-sm text-gray-400">{property.location}</p>
           <p className="mt-3 text-lg font-black text-yellow-300">
-            {currencyFormat.format(FEATURED_PRICE)}
+            {currencyFormat.format(FEATURED_PROPERTY_PRICE_COP)}
           </p>
         </div>
 
@@ -63,7 +69,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
         </div>
 
         <div className="mt-6">
-          <ConfirmFeaturePaymentButton propertyId={property.id} />
+          <ConfirmFeaturePaymentButton propertyId={property.id} checkoutToken={checkoutToken} />
         </div>
       </section>
     </div>

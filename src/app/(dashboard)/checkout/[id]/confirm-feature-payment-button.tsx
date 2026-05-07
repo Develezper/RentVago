@@ -5,10 +5,12 @@ import Link from "next/link";
 
 interface ConfirmFeaturePaymentButtonProps {
   propertyId: string;
+  checkoutToken: string;
 }
 
 export function ConfirmFeaturePaymentButton({
   propertyId,
+  checkoutToken,
 }: ConfirmFeaturePaymentButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function ConfirmFeaturePaymentButton({
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ propertyId }),
+        body: JSON.stringify({ propertyId, checkoutToken }),
       });
 
       if (!response.ok) {
