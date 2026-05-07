@@ -7,6 +7,8 @@ interface ContactOwnerButtonProps {
   propertyId: string;
   propertyTitle: string;
   whatsappNumber: string;
+  fallbackUrl?: string | null;
+  fallbackLabel?: string;
 }
 
 const extractErrorMessage = async (
@@ -34,9 +36,13 @@ export function ContactOwnerButton({
   propertyId,
   propertyTitle,
   whatsappNumber,
+  fallbackUrl,
+  fallbackLabel,
 }: ContactOwnerButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const normalizedFallbackUrl = (fallbackUrl ?? "").trim();
+  const shouldUseFallback = normalizedFallbackUrl.length > 0;
 
   const whatsappUrl = useMemo(() => {
     const normalizedNumber = whatsappNumber.replace(/\D/g, "");
@@ -48,6 +54,11 @@ export function ContactOwnerButton({
   }, [propertyTitle, whatsappNumber]);
 
   const handleContact = async () => {
+    if (shouldUseFallback) {
+      window.open(normalizedFallbackUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     setErrorMessage(null);
     setIsLoading(true);
 
@@ -94,12 +105,12 @@ export function ContactOwnerButton({
       <button
         type="button"
         onClick={handleContact}
-        disabled={isLoading}
+        disabled={isLoading && !shouldUseFallback}
         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-extrabold text-black transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto shadow-[0_0_18px_rgba(37,211,102,0.45)] hover:shadow-[0_0_30px_rgba(37,211,102,0.65)]"
         style={{ backgroundColor: "#25D366" }}
       >
         <MessageCircle className="h-5 w-5" />
-        {isLoading ? "Conectando..." : "Contactar por WhatsApp"}
+        {isLoading ? "Conectando..." : fallbackLabel ?? "Contactar por WhatsApp"}
       </button>
 
       {errorMessage ? (

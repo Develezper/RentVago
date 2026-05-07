@@ -3,30 +3,126 @@ import type { ScrapedPropertyInput } from "@/modules/admin/domain/admin.types";
 const APIFY_FACEBOOK_SCRAPER_ENDPOINT =
   "https://api.apify.com/v2/acts/apify~facebook-marketplace-scraper/run-sync-get-dataset-items";
 
-interface ApifyListingPrice {
-  amount?: string;
-}
-
-interface ApifyReverseGeocode {
-  city?: string;
-}
-
-interface ApifyLocation {
-  reverse_geocode?: ApifyReverseGeocode;
-}
-
-interface ApifyPrimaryListingPhoto {
-  photo_image_url?: string;
-}
-
 interface ApifyFacebookItem {
-  marketplace_listing_title?: string;
-  custom_title?: string;
-  listing_price?: ApifyListingPrice;
-  location?: ApifyLocation;
-  primary_listing_photo?: ApifyPrimaryListingPhoto;
-  listingUrl?: string;
+  [key: string]: unknown;
 }
+
+type JsonObject = Record<string, unknown>;
+
+const isJsonObject = (value: unknown): value is JsonObject => {
+  return typeof value === "object" && value !== null;
+};
+
+const getNestedValue = (source: unknown, path: string): unknown => {
+  if (!isJsonObject(source)) {
+    return undefined;
+  }
+
+  const directValue = source[path];
+  if (directValue !== undefined) {
+    return directValue;
+  }
+
+  return path.split(".").reduce<unknown>((current, segment) => {
+    if (!isJsonObject(current)) {
+      return undefined;
+    }
+
+    return current[segment];
+  }, source);
+};
+
+const getFirstNonEmptyString = (source: unknown, paths: string[]): string => {
+  for (const path of paths) {
+    const value = getNestedValue(source, path);
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return "";
+};
+
+const isValidHttpUrl = (value: string): boolean => {
+  return /^https?:\/\//i.test(value);
+};
+
+const collectListingImageUrls = (item: ApifyFacebookItem): string[] => {
+  const imageUrls: string[] = [];
+  const seen = new Set<string>();
+
+  const pushUrl = (value: string) => {
+    const normalized = value.trim();
+    if (!isValidHttpUrl(normalized) || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    imageUrls.push(normalized);
+  };
+
+  const collectFromUnknown = (value: unknown) => {
+    if (typeof value === "string") {
+      pushUrl(value);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(collectFromUnknown);
+      return;
+    }
+
+    if (!isJsonObject(value)) {
+      return;
+    }
+
+    const photoObjectCandidatePaths = [
+      "photo_image_url",
+      "image_url",
+      "imageUrl",
+      "display_image_url",
+      "uri",
+      "url",
+      "original",
+      "large",
+    ];
+
+    for (const path of photoObjectCandidatePaths) {
+      const nested = getNestedValue(value, path);
+      if (typeof nested === "string") {
+        pushUrl(nested);
+      }
+    }
+  };
+
+  const imageCollectionPaths = [
+    "listing_photos",
+    "listingPhotos",
+    "photos",
+    "gallery",
+    "images",
+    "image_urls",
+    "imageUrls",
+    "all_listing_photos",
+    "listing_details.photos",
+    "listing_details.images",
+    "listing_details.gallery",
+    "listingDetails.photos",
+    "listingDetails.images",
+    "listingDetails.gallery",
+  ];
+
+  const primaryImagePaths = [
+    "primary_listing_photo.photo_image_url",
+    "primary_listing_photo.image_url",
+    "primaryListingPhoto.photoImageUrl",
+    "primaryListingPhoto.imageUrl",
+  ];
+
+  imageCollectionPaths.forEach((path) => collectFromUnknown(getNestedValue(item, path)));
+  primaryImagePaths.forEach((path) => collectFromUnknown(getNestedValue(item, path)));
+
+  return imageUrls;
+};
 
 const parsePriceAmount = (amount: string | undefined): number => {
   if (!amount) {
@@ -60,7 +156,7 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        includeListingDetails: false,
+        includeListingDetails: true,
         resultsLimit: 20,
         startUrls: [{ url: targetUrl }],
       }),
@@ -87,17 +183,48 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
   return data
     .map((rawItem) => {
       const item = rawItem as ApifyFacebookItem;
-      const title = (item.marketplace_listing_title ?? item.custom_title ?? "").trim();
-      const mappedCity = item.location?.reverse_geocode?.city?.trim() || normalizedCity;
-      const primaryImageUrl = item.primary_listing_photo?.photo_image_url;
+      const title = getFirstNonEmptyString(item, [
+        "marketplace_listing_title",
+        "custom_title",
+        "title",
+      ]);
+      const mappedCity =
+        getFirstNonEmptyString(item, [
+          "location.reverse_geocode.city",
+          "location.reverseGeocode.city",
+          "location.city",
+          "reverse_geocode.city",
+          "city",
+        ]) || normalizedCity;
+      const description =
+        getFirstNonEmptyString(item, [
+          "detailedDescription",
+          "listing_details.description",
+          "listingDetails.description",
+          "marketplace_listing_description",
+          "listing_description",
+          "description",
+        ]) || title;
+      const imageUrls = collectListingImageUrls(item);
+      const sourceUrl = getFirstNonEmptyString(item, ["listingUrl", "listing_url", "url"]);
+
+      const amount =
+        getFirstNonEmptyString(item, [
+          "listing_price.amount",
+          "listingPrice.amount",
+          "listing_price.formatted_amount",
+          "listingPrice.formatted_amount",
+          "price.amount",
+          "price",
+        ]) || undefined;
 
       return {
         title,
-        description: title,
-        price: parsePriceAmount(item.listing_price?.amount),
+        description,
+        price: parsePriceAmount(amount),
         location: mappedCity,
-        imageUrls: primaryImageUrl ? [primaryImageUrl] : [],
-        sourceUrl: (item.listingUrl ?? "").trim(),
+        imageUrls,
+        sourceUrl,
       } satisfies ScrapedPropertyInput;
     })
     .filter((item) => item.title.length > 0 && item.sourceUrl.length > 0);

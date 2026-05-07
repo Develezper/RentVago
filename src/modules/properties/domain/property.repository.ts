@@ -39,6 +39,7 @@ export interface PropertiesRepository {
     isScraped: boolean;
     isFeatured: boolean;
     featuredUntil: Date | null;
+    sourceUrl: string | null;
     createdAt: Date;
     owner: { id: string; name: string | null; phone: string | null } | null;
   } | null>;
@@ -55,6 +56,7 @@ export interface PropertiesRepository {
     isScraped: boolean;
     isFeatured: boolean;
     featuredUntil: Date | null;
+    sourceUrl: string | null;
     status: PropertyStatus;
     createdAt: Date;
     ownerId: string | null;

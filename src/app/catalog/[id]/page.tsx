@@ -60,7 +60,12 @@ export default async function CatalogPropertyPage({
 
   if (!property) notFound();
 
+  const ownerPhoneValue = toDigitsOnly(property.owner?.phone);
+  const hasOwnerPhone = ownerPhoneValue.length > 0;
   const hasContactableOwner = property.owner?.id != null;
+  const facebookFallbackUrl =
+    property.isScraped && !hasOwnerPhone ? (property.sourceUrl ?? "").trim() : "";
+  const canFallbackToFacebook = facebookFallbackUrl.length > 0;
   const whatsappNumber = resolveWhatsappNumber(property.owner?.phone);
 
   return (
@@ -152,15 +157,19 @@ export default async function CatalogPropertyPage({
                   </Link>
                 </div>
               </>
-            ) : hasContactableOwner ? (
+            ) : hasContactableOwner || canFallbackToFacebook ? (
               <>
                 <p className="text-gray-500 text-sm mb-4">
-                  Contacta por WhatsApp y registra este interés como lead para seguimiento.
+                  {canFallbackToFacebook
+                    ? "Esta propiedad no tiene telefono. Te redirigimos a la publicacion original para contactar al propietario."
+                    : "Contacta por WhatsApp y registra este interés como lead para seguimiento."}
                 </p>
                 <ContactOwnerButton
                   propertyId={property.id}
                   propertyTitle={property.title}
                   whatsappNumber={whatsappNumber}
+                  fallbackUrl={facebookFallbackUrl}
+                  fallbackLabel={canFallbackToFacebook ? "Contactar en Facebook" : undefined}
                 />
               </>
             ) : (

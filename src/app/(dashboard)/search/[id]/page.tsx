@@ -61,8 +61,17 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   const whatsappText = encodeURIComponent(
     `Hola, me interesa la propiedad "${property.title}" (${property.location}).`,
   );
+  const ownerPhoneDigits = toDigitsOnly(property.owner?.phone);
+  const shouldUseFacebookFallback =
+    property.isScraped &&
+    ownerPhoneDigits.length === 0 &&
+    (property.sourceUrl ?? "").trim().length > 0;
   const whatsappNumber = resolveWhatsappNumber(property.owner?.phone);
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappText}`;
+  const contactUrl = shouldUseFacebookFallback ? (property.sourceUrl ?? "") : whatsappUrl;
+  const contactLabel = shouldUseFacebookFallback
+    ? "Contactar en Facebook"
+    : "Contactar por WhatsApp";
   const primaryImage = property.images[0] ?? "";
   const secondaryImage = property.images[1] ?? primaryImage;
   const tertiaryImage = property.images[2] ?? primaryImage;
@@ -162,12 +171,12 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             Nuestro equipo te acompana en el proceso de arriendo con atencion personalizada.
           </p>
           <a
-            href={whatsappUrl}
+            href={contactUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-green-500 px-4 text-sm font-extrabold text-black transition hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)]"
           >
-            Contactar por WhatsApp
+            {contactLabel}
           </a>
         </aside>
       </div>
