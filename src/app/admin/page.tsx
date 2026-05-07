@@ -184,6 +184,31 @@ export default async function AdminPage() {
         )}
       </section>
 
+      <section className="mb-8 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+            Propiedades calientes por leads
+          </h2>
+          <span className="text-xs text-gray-500">Clicks de contacto</span>
+        </div>
+
+        {businessStats.topLeadProperties.length === 0 ? (
+          <p className="text-sm text-gray-500">Aun no se han generado leads.</p>
+        ) : (
+          <div className="space-y-2">
+            {businessStats.topLeadProperties.map((entry) => (
+              <div
+                key={entry.propertyId}
+                className="flex items-center justify-between rounded-xl border border-gray-800 bg-black/50 px-3 py-2"
+              >
+                <p className="truncate pr-4 text-sm text-gray-200">{entry.title}</p>
+                <p className="text-sm font-bold text-green-400">{entry.leads} leads</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <DashboardCharts data={metrics} originData={businessStats.propertyOriginData} />
     </div>
   );

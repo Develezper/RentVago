@@ -25,6 +25,7 @@ export interface AdminBusinessStatsSnapshot {
   activeAlerts: number;
   hotZones: Array<{ zone: string; searches: number }>;
   propertiesByCity: Array<{ city: string; properties: number }>;
+  topLeadProperties: Array<{ propertyId: string; title: string; leads: number }>;
 }
 
 export interface AdminBusinessStats {
@@ -49,6 +50,7 @@ export interface AdminBusinessStats {
   };
   hotZones: Array<{ zone: string; searches: number }>;
   propertiesByCity: Array<{ city: string; properties: number }>;
+  topLeadProperties: Array<{ propertyId: string; title: string; leads: number }>;
 }
 
 export interface AdminUser {

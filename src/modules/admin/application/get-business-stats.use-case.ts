@@ -47,6 +47,7 @@ export class GetBusinessStatsUseCase {
       },
       hotZones: snapshot.hotZones,
       propertiesByCity: snapshot.propertiesByCity,
+      topLeadProperties: snapshot.topLeadProperties,
     };
   }
 }

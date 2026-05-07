@@ -55,6 +55,12 @@ type PropertiesByCityRow = {
   property_count: bigint;
 };
 
+type TopLeadPropertyRow = {
+  property_id: string;
+  property_title: string;
+  leads_count: bigint;
+};
+
 class PrismaAdminRepository implements AdminRepository {
   async getStats(): Promise<AdminStats> {
     const [activeUsers, totalProperties, totalLeases, totalLeads] = await Promise.all([
@@ -105,6 +111,7 @@ class PrismaAdminRepository implements AdminRepository {
       hotZones,
       alertsSummary,
       propertiesByCity,
+      topLeadProperties,
     ] = await Promise.all([
       prisma.$queryRaw<BusinessPropertyStatsRow[]>(Prisma.sql`
         SELECT
@@ -168,6 +175,17 @@ class PrismaAdminRepository implements AdminRepository {
         GROUP BY 1
         ORDER BY COUNT(*) DESC, city_name ASC
       `),
+      prisma.$queryRaw<TopLeadPropertyRow[]>(Prisma.sql`
+        SELECT
+          "Lead"."propertyId" AS property_id,
+          "Property"."title" AS property_title,
+          COUNT(*)::bigint AS leads_count
+        FROM "Lead"
+        INNER JOIN "Property" ON "Property"."id" = "Lead"."propertyId"
+        GROUP BY "Lead"."propertyId", "Property"."title"
+        ORDER BY COUNT(*) DESC, "Property"."title" ASC
+        LIMIT 5
+      `),
     ]);
 
     const property = propertyStats[0];
@@ -192,6 +210,11 @@ class PrismaAdminRepository implements AdminRepository {
       propertiesByCity: propertiesByCity.map((cityRow) => ({
         city: cityRow.city_name,
         properties: toSafeNumber(cityRow.property_count),
+      })),
+      topLeadProperties: topLeadProperties.map((entry) => ({
+        propertyId: entry.property_id,
+        title: entry.property_title,
+        leads: toSafeNumber(entry.leads_count),
       })),
     };
   }
