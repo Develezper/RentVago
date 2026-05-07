@@ -108,10 +108,10 @@ export function SearchFiltersPanel({
   onSaveSearchFilter,
 }: SearchFiltersPanelProps) {
   return (
-    <aside className="h-fit rounded-3xl border border-gray-800 bg-black p-5 shadow-sm">
+    <aside className="w-full rounded-3xl border border-gray-800 bg-black p-5 shadow-sm sm:p-6">
       <h2 className="text-base font-semibold text-white">Filtros</h2>
-      <div className="mt-4 space-y-4">
-        <div className="space-y-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="space-y-2 sm:col-span-2 xl:col-span-2">
           <label htmlFor="location" className="text-sm font-medium text-gray-400">
             Zona o barrio
           </label>
@@ -126,44 +126,37 @@ export function SearchFiltersPanel({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <label htmlFor="minPrice" className="text-sm font-medium text-gray-400">
-              Precio min
-            </label>
-            <input
-              id="minPrice"
-              name="minPrice"
-              type="number"
-              value={filters.minPrice}
-              onChange={(event) => onFilterChange("minPrice", event.target.value)}
-              onBlur={onPriceRangeBlur}
-              placeholder="1200000"
-              className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="maxPrice" className="text-sm font-medium text-gray-400">
-              Precio max
-            </label>
-            <input
-              id="maxPrice"
-              name="maxPrice"
-              type="number"
-              value={filters.maxPrice}
-              onChange={(event) => onFilterChange("maxPrice", event.target.value)}
-              onBlur={onPriceRangeBlur}
-              placeholder="5000000"
-              className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
-            />
-          </div>
+        <div className="space-y-2">
+          <label htmlFor="minPrice" className="text-sm font-medium text-gray-400">
+            Precio min
+          </label>
+          <input
+            id="minPrice"
+            name="minPrice"
+            type="number"
+            value={filters.minPrice}
+            onChange={(event) => onFilterChange("minPrice", event.target.value)}
+            onBlur={onPriceRangeBlur}
+            placeholder="1200000"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          />
         </div>
 
-        {hasInvalidPriceRange ? (
-          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
-            {priceRangeValidationMessage}
-          </p>
-        ) : null}
+        <div className="space-y-2">
+          <label htmlFor="maxPrice" className="text-sm font-medium text-gray-400">
+            Precio max
+          </label>
+          <input
+            id="maxPrice"
+            name="maxPrice"
+            type="number"
+            value={filters.maxPrice}
+            onChange={(event) => onFilterChange("maxPrice", event.target.value)}
+            onBlur={onPriceRangeBlur}
+            placeholder="5000000"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          />
+        </div>
 
         <div className="space-y-2">
           <label htmlFor="rooms" className="text-sm font-medium text-gray-400">
@@ -187,7 +180,7 @@ export function SearchFiltersPanel({
         <button
           type="button"
           onClick={() => onFilterChange("verifiedOnly", !filters.verifiedOnly)}
-          className={`h-11 w-full rounded-2xl border px-4 text-sm font-semibold transition ${
+          className={`h-11 w-full rounded-2xl border px-4 text-sm font-semibold transition sm:col-span-2 xl:col-span-2 ${
             filters.verifiedOnly
               ? "border-green-500 bg-green-500/10 text-green-300"
               : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-600 hover:text-white"
@@ -197,6 +190,12 @@ export function SearchFiltersPanel({
             ? "Mostrando Publicaciones Verificadas"
             : "Mostrar solo Publicaciones Verificadas"}
         </button>
+
+        {hasInvalidPriceRange ? (
+          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400 sm:col-span-2 xl:col-span-6">
+            {priceRangeValidationMessage}
+          </p>
+        ) : null}
 
         <button
           type="button"
@@ -210,7 +209,7 @@ export function SearchFiltersPanel({
           type="button"
           onClick={onSaveSearchFilter}
           disabled={isSavingSearchFilter || hasInvalidPriceRange}
-          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-3 ${
             isSearchAlertActive
               ? "border-green-500 bg-green-500/10 text-green-300"
               : "border-gray-700 bg-gray-900 text-white hover:border-green-500/60"

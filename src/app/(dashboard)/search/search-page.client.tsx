@@ -311,7 +311,7 @@ export function SearchPageClient({
         onSubmit={submitSearch}
       />
 
-      <section className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <section className="flex flex-col gap-4">
         <SearchFiltersPanel
           filters={filters}
           isSavingSearchFilter={isSavingSearchFilter}

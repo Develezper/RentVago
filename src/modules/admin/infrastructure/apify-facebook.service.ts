@@ -287,7 +287,7 @@ const normalizeSearchText = (value: string): string => {
     .toLowerCase();
 };
 
-const resolveCanonicalCity = (value: string): string | undefined => {
+export const resolveCanonicalCity = (value: string): string | undefined => {
   const normalized = normalizeSearchText(value);
 
   for (const mapping of VALLE_DE_ABURRA_CITY_MAPPINGS) {
@@ -335,7 +335,7 @@ const getFirstPositiveInteger = (source: unknown, paths: string[]): number | und
   return undefined;
 };
 
-const extractRoomsFromDescription = (description: string): number | undefined => {
+export const extractRoomsFromDescription = (description: string): number | undefined => {
   const match = description.match(
     /\b(\d{1,2})\s*(?:habitaciones?|alcobas?|piezas?|hab(?:\.|itaciones?)?)\b/i,
   );
@@ -352,7 +352,7 @@ const normalizeLocationSegment = (value: string): string => {
   return value.replace(/\s+/g, " ").replace(/^[,.:;\-]+|[,.:;\-]+$/g, "").trim();
 };
 
-const extractNeighborhoodFromDescription = (description: string): string | undefined => {
+export const extractNeighborhoodFromDescription = (description: string): string | undefined => {
   const patterns = [
     /\bbarrio\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
     /\bsector\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
