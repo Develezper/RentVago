@@ -1,11 +1,15 @@
 import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,
 } from "@/modules/properties/domain/property.types";
 import { propertiesRepository } from "@/modules/properties/infrastructure/property.repository";
+import { GetRecommendedPropertiesUseCase } from "@/modules/properties/application/get-recommended-properties.use-case";
+
+const getRecommendedPropertiesUseCase = new GetRecommendedPropertiesUseCase(propertiesRepository);
 
 const searchProperties = (filters: PropertySearchFilters): Promise<PropertySearchResult> => {
   return propertiesRepository.searchProperties(filters);
@@ -13,6 +17,18 @@ const searchProperties = (filters: PropertySearchFilters): Promise<PropertySearc
 
 const listPublicProperties = (query: PublicPropertyListQuery) => {
   return propertiesRepository.listPublicProperties(query);
+};
+
+const countPublicProperties = (query: PublicPropertyCountQuery) => {
+  return propertiesRepository.countPublicProperties(query);
+};
+
+const getRecommendedProperties = (input: {
+  userId?: string | null;
+  preferredCity?: string | null;
+  limit?: number;
+}) => {
+  return getRecommendedPropertiesUseCase.execute(input);
 };
 
 const getPublicPropertyById = (id: string) => {
@@ -46,6 +62,8 @@ const listPropertyOptions = () => {
 export const propertiesUseCases = {
   searchProperties,
   listPublicProperties,
+  countPublicProperties,
+  getRecommendedProperties,
   getPublicPropertyById,
   getPropertyById,
   listAdminProperties,
@@ -58,6 +76,7 @@ export const propertiesUseCases = {
 export type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,

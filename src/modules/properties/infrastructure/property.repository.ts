@@ -7,6 +7,7 @@ import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
   CreatePropertyDTO,
+  PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,
@@ -14,6 +15,57 @@ import type {
 
 const normalizeSql = (value: Prisma.Sql): Prisma.Sql =>
   Prisma.sql`immutable_unaccent(lower(${value}))`;
+
+const buildPublicPropertyWhere = (
+  query: Pick<PublicPropertyListQuery, "query" | "city" | "minPrice" | "maxPrice"> & {
+    createdAfter?: Date;
+  },
+): Prisma.PropertyWhereInput => {
+  const filters: Prisma.PropertyWhereInput[] = [];
+
+  if (query.query && query.query.trim().length > 0) {
+    const normalized = query.query.trim();
+    filters.push({
+      OR: [
+        { title: { contains: normalized, mode: "insensitive" } },
+        { location: { contains: normalized, mode: "insensitive" } },
+        { description: { contains: normalized, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (query.city && query.city.trim().length > 0) {
+    const resolvedCity = resolveActiveCityByInput(query.city.trim());
+
+    if (!resolvedCity) {
+      filters.push({ id: { equals: "__no-results__" } });
+    } else {
+      const cityFilters: Prisma.PropertyWhereInput[] = resolvedCity.aliases.flatMap((alias) => [
+        { city: { equals: alias, mode: "insensitive" } },
+        { location: { contains: alias, mode: "insensitive" } },
+      ]);
+
+      filters.push({ OR: cityFilters });
+    }
+  }
+
+  if (query.minPrice !== undefined && Number.isFinite(query.minPrice)) {
+    filters.push({ price: { gte: query.minPrice } });
+  }
+
+  if (query.maxPrice !== undefined && Number.isFinite(query.maxPrice)) {
+    filters.push({ price: { lte: query.maxPrice } });
+  }
+
+  if (query.createdAfter) {
+    filters.push({ createdAt: { gte: query.createdAfter } });
+  }
+
+  return {
+    status: PropertyStatus.AVAILABLE,
+    ...(filters.length > 0 ? { AND: filters } : {}),
+  };
+};
 
 class PrismaPropertiesRepository implements PropertiesRepository {
   async searchProperties(filters: PropertySearchFilters): Promise<PropertySearchResult> {
@@ -151,46 +203,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       type: string;
     }>;
   }> {
-    const filters: Prisma.PropertyWhereInput[] = [];
-
-    if (query.query && query.query.trim().length > 0) {
-      const normalized = query.query.trim();
-      filters.push({
-        OR: [
-          { title: { contains: normalized, mode: "insensitive" } },
-          { location: { contains: normalized, mode: "insensitive" } },
-          { description: { contains: normalized, mode: "insensitive" } },
-        ],
-      });
-    }
-
-    if (query.city && query.city.trim().length > 0) {
-      const resolvedCity = resolveActiveCityByInput(query.city.trim());
-
-      if (!resolvedCity) {
-        filters.push({ id: { equals: "__no-results__" } });
-      } else {
-        const cityFilters: Prisma.PropertyWhereInput[] = resolvedCity.aliases.flatMap((alias) => [
-          { city: { equals: alias, mode: "insensitive" } },
-          { location: { contains: alias, mode: "insensitive" } },
-        ]);
-
-        filters.push({ OR: cityFilters });
-      }
-    }
-
-    if (query.minPrice !== undefined && Number.isFinite(query.minPrice)) {
-      filters.push({ price: { gte: query.minPrice } });
-    }
-
-    if (query.maxPrice !== undefined && Number.isFinite(query.maxPrice)) {
-      filters.push({ price: { lte: query.maxPrice } });
-    }
-
-    const where: Prisma.PropertyWhereInput = {
-      status: PropertyStatus.AVAILABLE,
-      ...(filters.length > 0 ? { AND: filters } : {}),
-    };
+    const where = buildPublicPropertyWhere(query);
 
     const [total, items] = await Promise.all([
       prisma.property.count({ where }),
@@ -213,6 +226,11 @@ class PrismaPropertiesRepository implements PropertiesRepository {
     ]);
 
     return { total, items };
+  }
+
+  async countPublicProperties(query: PublicPropertyCountQuery): Promise<number> {
+    const where = buildPublicPropertyWhere(query);
+    return prisma.property.count({ where });
   }
 
   async getPublicPropertyById(id: string) {

@@ -50,6 +50,13 @@ export interface PublicPropertyListQuery {
   maxPrice?: number;
 }
 
+export interface PublicPropertyCountQuery {
+  city?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  createdAfter?: Date;
+}
+
 export interface AdminPropertyCreateInput {
   title: string;
   description: string;

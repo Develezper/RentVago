@@ -2,6 +2,7 @@ import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
   CreatePropertyDTO,
+  PublicPropertyCountQuery,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,
@@ -23,6 +24,7 @@ export interface PropertiesRepository {
       type: string;
     }>;
   }>;
+  countPublicProperties(query: PublicPropertyCountQuery): Promise<number>;
   getPublicPropertyById(id: string): Promise<{
     id: string;
     title: string;
