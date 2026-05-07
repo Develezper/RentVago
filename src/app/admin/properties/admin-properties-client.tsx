@@ -42,13 +42,21 @@ export function AdminPropertiesClient({ properties }: { properties: PropertyRow[
           <h1 className="text-4xl font-black text-white tracking-tight mb-2">Propiedades</h1>
           <p className="text-gray-400 font-medium">Gestión completa del inventario de propiedades.</p>
         </div>
-        <Link
-          href="/admin/properties/new"
-          className="flex items-center gap-2 bg-green-500 text-black font-extrabold px-5 py-3 rounded-2xl hover:bg-green-400 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva propiedad
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/properties/pending"
+            className="flex items-center gap-2 border border-gray-800 bg-black text-gray-200 font-bold px-5 py-3 rounded-2xl hover:border-gray-700 hover:text-white transition-colors"
+          >
+            Pendientes
+          </Link>
+          <Link
+            href="/admin/properties/new"
+            className="flex items-center gap-2 bg-green-500 text-black font-extrabold px-5 py-3 rounded-2xl hover:bg-green-400 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nueva propiedad
+          </Link>
+        </div>
       </header>
 
       <div className="bg-black rounded-2xl border border-gray-800 overflow-hidden">

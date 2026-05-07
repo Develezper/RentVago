@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 interface PendingPropertyItem {
   id: string;
   title: string;
-  city: string | null;
   location: string;
   type: "CASA" | "APARTAMENTO";
   price: string;
@@ -126,7 +125,7 @@ export function PendingPropertiesClient({ initialProperties }: PendingProperties
                       </p>
                     </td>
                     <td className="px-5 py-4 text-gray-400">
-                      {property.city ?? "Sin ciudad"} - {property.location}
+                      {property.location}
                     </td>
                     <td className="px-5 py-4 text-green-400 font-bold">
                       ${toCurrency(property.price)}

@@ -37,6 +37,12 @@ export default async function DashboardLayout({
               Buscar
             </Link>
             <Link
+              href="/my-properties/new"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
+            >
+              Publicar
+            </Link>
+            <Link
               href="/favorites"
               className="rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition hover:bg-gray-800 hover:text-white"
             >
