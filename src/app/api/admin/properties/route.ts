@@ -4,8 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { adminService } from "@/services/admin.service";
-import { prisma } from "@/lib/prisma";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
-    const properties = await adminService.getAllProperties();
+    const properties = await propertiesUseCases.listAdminProperties();
     const data = properties.map((p) => ({
       id: p.id,
       title: p.title,
@@ -56,17 +55,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = propertyCreateSchema.parse(body);
-    const created = await prisma.property.create({
-      data: {
-        title: payload.title,
-        description: payload.description,
-        location: payload.location,
-        price: payload.price,
-        rooms: payload.rooms,
-        type: payload.type,
-        images: payload.images,
-        ownerId: payload.ownerId ?? null,
-      },
+    const created = await propertiesUseCases.createAdminProperty({
+      title: payload.title,
+      description: payload.description,
+      location: payload.location,
+      price: payload.price,
+      rooms: payload.rooms,
+      type: payload.type,
+      images: payload.images,
+      ownerId: payload.ownerId ?? null,
     });
     return NextResponse.json(
       { data: { ...created, price: created.price.toString() } },
