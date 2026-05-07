@@ -398,7 +398,13 @@ class PrismaPropertiesRepository implements PropertiesRepository {
     return prisma.property.update({
       where: { id },
       data: {
-        ...input,
+        title: input.title,
+        description: input.description,
+        location: input.location,
+        rooms: input.rooms,
+        type: input.type,
+        images: input.images,
+        ownerId: input.ownerId,
         price: input.price !== undefined ? input.price : undefined,
       },
     });

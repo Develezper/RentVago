@@ -43,11 +43,20 @@ export default async function CatalogPage({
     : "/search";
   const activateAlertHref = `/login?next=${encodeURIComponent(prefixedSearchHref)}`;
 
+  const minPriceLabel =
+    params.minPrice && Number.isFinite(Number(params.minPrice))
+      ? Number(params.minPrice).toLocaleString("es-CO")
+      : null;
+  const maxPriceLabel =
+    params.maxPrice && Number.isFinite(Number(params.maxPrice))
+      ? Number(params.maxPrice).toLocaleString("es-CO")
+      : null;
+
   const activeFilters = [
     city ? `Ciudad: ${city}` : null,
     query ? `Busqueda: ${query}` : null,
-    params.minPrice ? `Min: ${Number(params.minPrice).toLocaleString("es-CO")}` : null,
-    params.maxPrice ? `Max: ${Number(params.maxPrice).toLocaleString("es-CO")}` : null,
+    minPriceLabel ? `Min: ${minPriceLabel}` : null,
+    maxPriceLabel ? `Max: ${maxPriceLabel}` : null,
   ].filter((value): value is string => value !== null);
 
   return (
