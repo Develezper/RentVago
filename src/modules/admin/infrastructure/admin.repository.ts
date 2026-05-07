@@ -154,20 +154,21 @@ class PrismaAdminRepository implements AdminRepository {
     const property = propertyStats[0];
     const growth = growthStats[0];
     const alerts = alertsSummary[0];
+    const toSafeNumber = (value: bigint | number | undefined): number => Number(value ?? 0);
 
     return {
-      approvedProperties: Number(property?.approved_count ?? 0n),
-      rejectedProperties: Number(property?.rejected_count ?? 0n),
-      pendingProperties: Number(property?.pending_count ?? 0n),
-      scrapedProperties: Number(property?.scraped_count ?? 0n),
-      directProperties: Number(property?.direct_count ?? 0n),
-      currentMonthProperties: Number(growth?.current_month_count ?? 0n),
-      previousMonthProperties: Number(growth?.previous_month_count ?? 0n),
-      triggeredAlertsThisMonth: Number(alerts?.triggered_alerts ?? 0n),
-      activeAlerts: Number(alerts?.active_alerts ?? 0n),
+      approvedProperties: toSafeNumber(property?.approved_count),
+      rejectedProperties: toSafeNumber(property?.rejected_count),
+      pendingProperties: toSafeNumber(property?.pending_count),
+      scrapedProperties: toSafeNumber(property?.scraped_count),
+      directProperties: toSafeNumber(property?.direct_count),
+      currentMonthProperties: toSafeNumber(growth?.current_month_count),
+      previousMonthProperties: toSafeNumber(growth?.previous_month_count),
+      triggeredAlertsThisMonth: toSafeNumber(alerts?.triggered_alerts),
+      activeAlerts: toSafeNumber(alerts?.active_alerts),
       hotZones: hotZones.map((zone) => ({
         zone: zone.zone,
-        searches: Number(zone.searches),
+        searches: toSafeNumber(zone.searches),
       })),
     };
   }
