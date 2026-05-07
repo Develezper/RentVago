@@ -306,22 +306,33 @@ class PrismaAdminRepository implements AdminRepository {
   }
 
   async upsertScrapedProperty(input: ScrapedPropertyInput): Promise<void> {
-    const images =
+    const rawImages =
       input.imageUrls && input.imageUrls.length > 0
         ? input.imageUrls
         : input.imageUrl
           ? [input.imageUrl]
           : [];
 
+    const images = Array.from(
+      new Set(
+        rawImages
+          .map((image) => image.trim())
+          .filter((image) => image.length > 0 && /^https?:\/\//i.test(image)),
+      ),
+    );
+
+    const updateData: Prisma.PropertyUpdateInput = {
+      title: input.title,
+      description: input.description,
+      price: input.price,
+      status: PropertyStatus.AVAILABLE,
+      // Evita borrar imágenes válidas cuando Apify no devuelve fotos en una corrida puntual.
+      ...(images.length > 0 ? { images } : {}),
+    };
+
     await prisma.property.upsert({
       where: { sourceUrl: input.sourceUrl },
-      update: {
-        title: input.title,
-        description: input.description,
-        price: input.price,
-        images,
-        status: PropertyStatus.AVAILABLE,
-      },
+      update: updateData,
       create: {
         title: input.title,
         description: input.description,
