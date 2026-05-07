@@ -1,6 +1,7 @@
 import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  CreatePropertyDTO,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,
@@ -74,6 +75,7 @@ export interface PropertiesRepository {
     ownerId: string | null;
     createdAt: Date;
   }>;
+  createDirectProperty(data: CreatePropertyDTO, ownerId: string): Promise<{ id: string }>;
   updateAdminProperty(id: string, input: AdminPropertyUpdateInput): Promise<{
     id: string;
     title: string;

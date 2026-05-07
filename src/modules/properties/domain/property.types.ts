@@ -50,6 +50,18 @@ export interface AdminPropertyCreateInput {
   ownerId?: string | null;
 }
 
+export interface CreatePropertyDTO {
+  title: string;
+  description?: string;
+  location?: string;
+  city: string;
+  neighborhood?: string;
+  price: number;
+  rooms?: number;
+  type: PropertyType;
+  images?: string[];
+}
+
 export interface AdminPropertyUpdateInput {
   title?: string;
   description?: string;

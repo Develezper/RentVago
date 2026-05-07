@@ -5,6 +5,7 @@ import type { PropertiesRepository } from "@/modules/properties/domain/property.
 import type {
   AdminPropertyCreateInput,
   AdminPropertyUpdateInput,
+  CreatePropertyDTO,
   PropertySearchFilters,
   PropertySearchResult,
   PublicPropertyListQuery,
@@ -226,6 +227,30 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         ownerId: input.ownerId ?? null,
       },
     });
+  }
+
+  async createDirectProperty(data: CreatePropertyDTO, ownerId: string): Promise<{ id: string }> {
+    const created = await prisma.property.create({
+      data: {
+        title: data.title,
+        description: data.description ?? "",
+        location: data.location ?? data.city,
+        city: data.city,
+        neighborhood: data.neighborhood,
+        price: data.price,
+        rooms: data.rooms,
+        type: data.type,
+        images: data.images ?? [],
+        ownerId,
+        isScraped: false,
+        status: PropertyStatus.PENDING_REVIEW,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return { id: created.id };
   }
 
   async updateAdminProperty(id: string, input: AdminPropertyUpdateInput) {
