@@ -76,7 +76,7 @@ export default async function HomePage() {
   return (
     <main className="relative isolation overflow-hidden bg-gray-950 text-white">
       <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80 pointer-events-none">
-        <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-green-500 to-black opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
+        <div className="relative left-[calc(50%-11rem)] aspect-1155/678 w-144.5 -translate-x-1/2 rotate-30 bg-linear-to-tr from-green-500 to-black opacity-20 sm:left-[calc(50%-30rem)] sm:w-288.75" />
       </div>
 
       <section className="relative z-10 mx-auto flex min-h-[68vh] w-full max-w-5xl items-center px-6 pb-10 pt-14 text-center lg:px-8">
@@ -90,7 +90,7 @@ export default async function HomePage() {
 
           <h1 className="mb-6 text-5xl font-black tracking-tight text-white sm:text-7xl">
             Gestiona tus alquileres con{" "}
-            <span className="bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
               RentVago
             </span>
           </h1>
@@ -159,8 +159,8 @@ export default async function HomePage() {
                   key={property.id}
                   className={`snap-start ${
                     index === 0
-                      ? "min-w-[320px] flex-none sm:min-w-[420px]"
-                      : "min-w-[300px] flex-none sm:min-w-[340px]"
+                      ? "min-w-[320px] flex-none sm:min-w-105"
+                      : "min-w-75 flex-none sm:min-w-85"
                   }`}
                 >
                   <PropertyCard property={property} className="h-full" />
