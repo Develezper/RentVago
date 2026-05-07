@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { runScraping, runScrapingAllSources } from "@/services/scraper.service";
+import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -31,11 +31,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const payload = runSchema.parse(body);
 
     if (payload.url) {
-      const result = await runScraping(payload.url);
+      const result = await scraperUseCases.runScraping(payload.url);
       return NextResponse.json({ data: [{ source: payload.url, ...result }] }, { status: 200 });
     }
 
-    const results = await runScrapingAllSources();
+    const results = await scraperUseCases.runScrapingAllSources();
     return NextResponse.json({ data: results }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);

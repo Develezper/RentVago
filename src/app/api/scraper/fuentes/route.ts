@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
-    const fuentes = await prisma.scrapingFuente.findMany({ orderBy: { creadoEn: "desc" } });
+    const fuentes = await scraperUseCases.listScrapingSources();
     const data = fuentes.map((f) => ({ ...f, creadoEn: f.creadoEn.toISOString() }));
     return NextResponse.json({ data }, { status: 200 });
   } catch (error: unknown) {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = fuenteCreateSchema.parse(body);
-    const created = await prisma.scrapingFuente.create({ data: payload });
+    const created = await scraperUseCases.createScrapingSource(payload);
     return NextResponse.json(
       { data: { ...created, creadoEn: created.creadoEn.toISOString() } },
       { status: 201 },

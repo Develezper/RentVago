@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -33,7 +33,7 @@ export async function PUT(
     const { id } = await params;
     const body: unknown = await request.json();
     const payload = fuenteUpdateSchema.parse(body);
-    const updated = await prisma.scrapingFuente.update({ where: { id }, data: payload });
+    const updated = await scraperUseCases.updateScrapingSource(id, payload);
     return NextResponse.json(
       { data: { ...updated, creadoEn: updated.creadoEn.toISOString() } },
       { status: 200 },
@@ -61,7 +61,7 @@ export async function DELETE(
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
     const { id } = await params;
-    await prisma.scrapingFuente.delete({ where: { id } });
+    await scraperUseCases.deleteScrapingSource(id);
     return NextResponse.json({ data: { deleted: true } }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);

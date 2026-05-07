@@ -3,7 +3,7 @@ import {
   AuthorizationError,
   requireAuthenticatedUser,
 } from "@/lib/api-auth";
-import { searchFilterService } from "@/services/search-filter.service";
+import { searchFilterUseCases } from "@/modules/properties/application/search-filter.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
   try {
     const authenticatedUser = await requireAuthenticatedUser(request);
     const id = await resolveId(context);
-    const filter = await searchFilterService.getByIdForUser(authenticatedUser.userId, id);
+    const filter = await searchFilterUseCases.getByIdForUser(authenticatedUser.userId, id);
 
     if (!filter) {
       return NextResponse.json({ error: "Filtro de búsqueda no encontrado." }, { status: 404 });
@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest, context: RouteContext): Promis
     const id = await resolveId(context);
     const body: unknown = await request.json();
     const payload = updateSearchFilterSchema.parse(body);
-    const updated = await searchFilterService.updateByIdForUser(
+    const updated = await searchFilterUseCases.updateByIdForUser(
       authenticatedUser.userId,
       id,
       payload,
@@ -123,7 +123,7 @@ export async function DELETE(request: NextRequest, context: RouteContext): Promi
   try {
     const authenticatedUser = await requireAuthenticatedUser(request);
     const id = await resolveId(context);
-    const deleted = await searchFilterService.deleteByIdForUser(authenticatedUser.userId, id);
+    const deleted = await searchFilterUseCases.deleteByIdForUser(authenticatedUser.userId, id);
 
     if (!deleted) {
       return NextResponse.json({ error: "Filtro de búsqueda no encontrado." }, { status: 404 });
