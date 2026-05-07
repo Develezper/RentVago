@@ -32,6 +32,11 @@ export default async function CatalogPage({
     maxPrice,
   });
 
+  const catalogCards = properties.map((property) => ({
+    ...property,
+    price: property.price.toString(),
+  }));
+
   const prefilledSearchParams = new URLSearchParams();
   if (query.length > 0) prefilledSearchParams.set("query", query);
   if (city.length > 0) prefilledSearchParams.set("city", city);
@@ -108,7 +113,7 @@ export default async function CatalogPage({
           </button>
         </form>
 
-        {properties.length === 0 ? (
+        {catalogCards.length === 0 ? (
           <div className="relative overflow-hidden rounded-3xl border border-gray-800 bg-black px-6 py-16 text-center">
             <div className="pointer-events-none absolute inset-0 bg-radial-[ellipse_at_top] from-green-500/12 via-transparent to-transparent" />
             <div className="relative mx-auto max-w-2xl">
@@ -154,7 +159,7 @@ export default async function CatalogPage({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property, index) => (
+            {catalogCards.map((property, index) => (
               <PropertyCard
                 key={property.id}
                 property={property}
