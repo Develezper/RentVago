@@ -72,7 +72,7 @@ export function PropertyImageCarousel({
                   alt={`${alt} - imagen ${activeIndex + 1}`}
                   fill
                   className="object-cover"
-                  unoptimized
+                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 70vw, 960px"
                   priority={activeIndex === 0}
                 />
               </motion.div>
@@ -141,7 +141,13 @@ export function PropertyImageCarousel({
               }`}
               aria-label={`Seleccionar miniatura ${index + 1}`}
             >
-              <Image src={image} alt={`${alt} miniatura ${index + 1}`} fill className="object-cover" unoptimized />
+              <Image
+                src={image}
+                alt={`${alt} miniatura ${index + 1}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 22vw, 96px"
+              />
             </button>
           ))}
         </div>

@@ -11,7 +11,7 @@ import {
   createAuthSignature,
 } from "@/lib/api-auth";
 import type { Role } from "@/generated/prisma/enums";
-import { verifyAccessToken } from "@/lib/jwt";
+import { verifyAccessToken, verifyRefreshToken } from "@/lib/jwt";
 import { authUseCases } from "@/modules/auth/application/auth.use-cases";
 import { errors as joseErrors } from "jose";
 import { NextRequest, NextResponse } from "next/server";
@@ -131,12 +131,37 @@ const isJwtExpiredError = (error: unknown): boolean =>
     "code" in error &&
     error.code === "ERR_JWT_EXPIRED");
 
+type AdminRefreshGuardResult = "allow" | "forbidden" | "unauthorized";
+
+const evaluateAdminRefreshToken = async (
+  refreshToken: string,
+): Promise<AdminRefreshGuardResult> => {
+  try {
+    const payload = await verifyRefreshToken(refreshToken);
+    return payload.role === "ADMIN" ? "allow" : "forbidden";
+  } catch {
+    return "unauthorized";
+  }
+};
+
 const refreshSession = async (
   request: NextRequest,
   route: ProtectedRoute,
 ): Promise<NextResponse | null> => {
   const refreshToken = request.cookies.get(REFRESH_COOKIE_NAME)?.value;
   if (!refreshToken) return null;
+
+  if (route.requiresRole === "ADMIN") {
+    const adminRefreshGuard = await evaluateAdminRefreshToken(refreshToken);
+
+    if (adminRefreshGuard === "forbidden") {
+      return rejectRequest(request, route, 403, false);
+    }
+
+    if (adminRefreshGuard === "unauthorized") {
+      return rejectRequest(request, route, 401, true);
+    }
+  }
 
   try {
     const result = await getOrCreateRefreshPromise(refreshToken);
