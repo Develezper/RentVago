@@ -1,6 +1,6 @@
-import { leaseService } from "@/services/lease.service";
-import { adminService } from "@/services/admin.service";
-import { prisma } from "@/lib/prisma";
+import { leaseUseCases } from "@/modules/admin/application/lease.use-cases";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { notFound } from "next/navigation";
 import { EditLeaseForm } from "./edit-lease-form";
 
@@ -12,12 +12,9 @@ export default async function EditLeasePage({
   const { id } = await params;
 
   const [lease, rawProperties, rawUsers] = await Promise.all([
-    leaseService.getLeaseById(id),
-    prisma.property.findMany({
-      orderBy: { title: "asc" },
-      select: { id: true, title: true, location: true },
-    }),
-    adminService.getAllUsers(),
+    leaseUseCases.getLeaseById(id),
+    propertiesUseCases.listPropertyOptions(),
+    adminUseCases.getAllUsers(),
   ]);
 
   if (!lease) notFound();

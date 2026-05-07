@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/prisma";
+import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
 import { AdminScraperClient } from "./admin-scraper-client";
 
 export default async function AdminScraperPage() {
-  const raw = await prisma.scrapingFuente.findMany({ orderBy: { creadoEn: "desc" } });
+  const raw = await scraperUseCases.listScrapingSources();
   const fuentes = raw.map((f) => ({
     id: f.id,
     nombre: f.nombre,

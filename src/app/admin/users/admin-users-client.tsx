@@ -7,7 +7,7 @@ interface UserRow {
   id: string;
   name: string | null;
   email: string;
-  role: "USER" | "SUPERADMIN";
+  role: "EMPLOYEE" | "ADMIN";
   isActive: boolean;
   createdAt: string;
 }
@@ -18,7 +18,7 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
 
   const updateUser = async (
     id: string,
-    payload: { role?: "USER" | "SUPERADMIN"; isActive?: boolean },
+    payload: { role?: "EMPLOYEE" | "ADMIN"; isActive?: boolean },
   ) => {
     setLoading(id);
     try {
@@ -37,7 +37,7 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
   };
 
   const toggleRole = (user: UserRow) => {
-    const newRole = user.role === "SUPERADMIN" ? "USER" : "SUPERADMIN";
+    const newRole = user.role === "ADMIN" ? "EMPLOYEE" : "ADMIN";
     updateUser(user.id, { role: newRole });
   };
 
@@ -90,7 +90,7 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
                   <td className="px-8 py-6">
                     <span
                       className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border ${
-                        user.role === "SUPERADMIN"
+                        user.role === "ADMIN"
                           ? "bg-green-500/10 text-green-400 border-green-500/30"
                           : "bg-gray-800 text-gray-300 border-gray-700"
                       }`}

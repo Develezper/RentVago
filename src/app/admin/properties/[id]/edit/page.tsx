@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { notFound } from "next/navigation";
 import { EditPropertyForm } from "./edit-property-form";
 
@@ -9,20 +9,7 @@ export default async function EditPropertyPage({
 }) {
   const { id } = await params;
 
-  const property = await prisma.property.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      location: true,
-      price: true,
-      rooms: true,
-      type: true,
-      images: true,
-      ownerId: true,
-    },
-  });
+  const property = await propertiesUseCases.getPropertyById(id);
 
   if (!property) notFound();
 

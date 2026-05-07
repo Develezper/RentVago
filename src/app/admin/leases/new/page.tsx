@@ -1,14 +1,11 @@
-import { adminService } from "@/services/admin.service";
-import { prisma } from "@/lib/prisma";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NewLeaseForm } from "./new-lease-form";
 
 export default async function NewLeasePage() {
   const [rawProperties, rawUsers] = await Promise.all([
-    prisma.property.findMany({
-      orderBy: { title: "asc" },
-      select: { id: true, title: true, location: true },
-    }),
-    adminService.getAllUsers(),
+    propertiesUseCases.listPropertyOptions(),
+    adminUseCases.getAllUsers(),
   ]);
 
   const properties = rawProperties.map((p) => ({

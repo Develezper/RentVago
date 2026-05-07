@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -20,24 +20,12 @@ export default async function CatalogPage({
   const minPrice = params.minPrice ? parseFloat(params.minPrice) : undefined;
   const maxPrice = params.maxPrice ? parseFloat(params.maxPrice) : undefined;
 
-  const properties = await prisma.property.findMany({
-    where: {
-      AND: [
-        query.length > 0
-          ? {
-              OR: [
-                { title: { contains: query, mode: "insensitive" } },
-                { location: { contains: query, mode: "insensitive" } },
-                { description: { contains: query, mode: "insensitive" } },
-              ],
-            }
-          : {},
-        minPrice !== undefined && !isNaN(minPrice) ? { price: { gte: minPrice } } : {},
-        maxPrice !== undefined && !isNaN(maxPrice) ? { price: { lte: maxPrice } } : {},
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-    take: 48,
+  const { items: properties } = await propertiesUseCases.listPublicProperties({
+    page: 1,
+    limit: 48,
+    query,
+    minPrice,
+    maxPrice,
   });
 
   return (

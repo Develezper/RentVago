@@ -3,8 +3,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { FavoriteButton } from "@/components/ui/favorite-button";
 import { resolveAuthenticatedUserFromHeaders } from "@/lib/api-auth";
-import { favoriteService } from "@/services/favorite.service";
-import { propertyService } from "@/services/property.service";
+import { favoritesUseCases } from "@/modules/properties/application/favorite.use-cases";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 
 interface PropertyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -23,10 +23,10 @@ const getAuthenticatedUserId = async (): Promise<string | null> => {
 
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
-  const property = await propertyService.getPropertyById(id);
+  const property = await propertiesUseCases.getPropertyById(id);
   const userId = await getAuthenticatedUserId();
   const isFavorite =
-    userId !== null ? await favoriteService.isPropertyFavorite(userId, id) : false;
+    userId !== null ? await favoritesUseCases.isPropertyFavorite(userId, id) : false;
 
   if (!property) {
     notFound();

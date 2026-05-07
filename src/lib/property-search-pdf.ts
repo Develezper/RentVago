@@ -1,5 +1,5 @@
 import type { ParsedPropertySearchQuery } from "@/lib/property-search-query";
-import type { PropertySearchResult } from "@/services/search.service";
+import type { PropertySearchResult } from "@/modules/properties/application/property.use-cases";
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 
 const PAGE_WIDTH = 595;

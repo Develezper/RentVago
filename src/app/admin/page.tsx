@@ -1,12 +1,12 @@
-import { adminService } from "@/services/admin.service";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import DashboardCharts from "@/components/admin/DashboardCharts";
 import Link from "next/link";
 import { Home, Users, BarChart2 } from "lucide-react";
 
 export default async function AdminPage() {
   const [stats, metrics] = await Promise.all([
-    adminService.getStats(),
-    adminService.getDashboardMetrics(),
+    adminUseCases.getStats(),
+    adminUseCases.getDashboardMetrics(),
   ]);
 
   return (

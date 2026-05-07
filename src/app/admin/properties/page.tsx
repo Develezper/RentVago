@@ -1,8 +1,8 @@
-import { adminService } from "@/services/admin.service";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { AdminPropertiesClient } from "./admin-properties-client";
 
 export default async function AdminPropertiesPage() {
-  const raw = await adminService.getAllProperties();
+  const raw = await propertiesUseCases.listAdminProperties();
   const properties = raw.map((p) => ({
     id: p.id,
     title: p.title,

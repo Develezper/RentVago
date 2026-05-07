@@ -2,8 +2,11 @@ import { PropertyGrid, SearchEmptyState, SearchLoadingSkeleton } from "./search-
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { resolveAuthenticatedUserFromHeaders } from "@/lib/api-auth";
-import { favoriteService } from "@/services/favorite.service";
-import { searchService, type PropertySearchFilters } from "@/services/search.service";
+import { favoritesUseCases } from "@/modules/properties/application/favorite.use-cases";
+import {
+  propertiesUseCases,
+  type PropertySearchFilters,
+} from "@/modules/properties/application/property.use-cases";
 import {
   buildPdfDownloadHref,
   type FilterState,
@@ -80,10 +83,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const { userId, role } = await getAuthenticatedViewer();
 
   const [results, favoriteItems] = await Promise.all([
-    searchService.searchProperties(
+    propertiesUseCases.searchProperties(
       toServiceFilters(initialState.filters, initialState.page, initialState.pageSize),
     ),
-    userId === null ? Promise.resolve([]) : favoriteService.listFavoritePropertyIdsForUser(userId),
+    userId === null
+      ? Promise.resolve([])
+      : favoritesUseCases.listFavoritePropertyIdsForUser(userId),
   ]);
 
   const favoritePropertyIds = favoriteItems.map((favorite) => favorite.propertyId);
