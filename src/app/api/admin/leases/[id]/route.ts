@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { leaseService } from "@/services/lease.service";
+import { leaseUseCases } from "@/modules/admin/application/lease.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -42,7 +42,7 @@ export async function GET(
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
     const { id } = await params;
-    const lease = await leaseService.getLeaseById(id);
+    const lease = await leaseUseCases.getLeaseById(id);
     if (!lease) return NextResponse.json({ error: "Arriendo no encontrado." }, { status: 404 });
     return NextResponse.json(
       {
@@ -72,7 +72,7 @@ export async function PUT(
     const { id } = await params;
     const body: unknown = await request.json();
     const payload = leaseUpdateSchema.parse(body);
-    const updated = await leaseService.updateLease(id, {
+    const updated = await leaseUseCases.updateLease(id, {
       ...payload,
       startDate: payload.startDate ? new Date(payload.startDate) : undefined,
       endDate: payload.endDate ? new Date(payload.endDate) : undefined,
@@ -112,7 +112,7 @@ export async function DELETE(
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
     const { id } = await params;
-    await leaseService.deleteLease(id);
+    await leaseUseCases.deleteLease(id);
     return NextResponse.json({ data: { deleted: true } }, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
