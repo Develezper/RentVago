@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
 export const runtime = "nodejs";
+export const maxDuration = 90;
 
 const runSchema = z
   .object({

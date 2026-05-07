@@ -2,6 +2,8 @@ import type { ScrapedPropertyInput } from "@/modules/admin/domain/admin.types";
 
 const APIFY_FACEBOOK_SCRAPER_ENDPOINT =
   "https://api.apify.com/v2/acts/apify~facebook-marketplace-scraper/run-sync-get-dataset-items";
+const APIFY_RESULTS_LIMIT = 10;
+const APIFY_REQUEST_TIMEOUT_MS = 90_000;
 
 interface ApifyFacebookItem {
   [key: string]: unknown;
@@ -43,6 +45,35 @@ const getFirstNonEmptyString = (source: unknown, paths: string[]): string => {
   return "";
 };
 
+const getFirstNonEmptyText = (source: unknown, paths: string[]): string => {
+  for (const path of paths) {
+    const value = getNestedValue(source, path);
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    if (!isJsonObject(value)) {
+      continue;
+    }
+
+    const nestedText = getFirstNonEmptyString(value, [
+      "text",
+      "description",
+      "value",
+      "content",
+      "message",
+      "body",
+    ]);
+
+    if (nestedText.length > 0) {
+      return nestedText;
+    }
+  }
+
+  return "";
+};
+
 const isValidHttpUrl = (value: string): boolean => {
   return /^https?:\/\//i.test(value);
 };
@@ -77,9 +108,29 @@ const collectListingImageUrls = (item: ApifyFacebookItem): string[] => {
 
     const photoObjectCandidatePaths = [
       "photo_image_url",
+      "photoImageUrl",
+      "photo_url",
+      "photoUrl",
       "image_url",
       "imageUrl",
+      "image.url",
+      "image.uri",
+      "image.src",
+      "image.original",
+      "image.large",
+      "image_uri",
+      "imageUri",
+      "src",
+      "source",
+      "thumbnail",
+      "thumbnail_url",
+      "thumbnailUrl",
+      "preview_image_url",
+      "previewImageUrl",
+      "original_image_url",
+      "originalImageUrl",
       "display_image_url",
+      "displayImageUrl",
       "uri",
       "url",
       "original",
@@ -95,27 +146,57 @@ const collectListingImageUrls = (item: ApifyFacebookItem): string[] => {
   };
 
   const imageCollectionPaths = [
-    "listing_photos",
     "listingPhotos",
+    "listingPhotos.nodes",
+    "listingPhotos.edges",
+    "listing_photos",
+    "listing_photos.nodes",
+    "listing_photos.edges",
+    "listingPhotos",
+    "listing_media",
+    "listingMedia",
+    "all_photos",
+    "all_photos.nodes",
+    "allPhotos",
+    "allPhotos.nodes",
     "photos",
+    "photo_urls",
+    "photoUrls",
+    "photo_gallery",
+    "photoGallery",
     "gallery",
     "images",
     "image_urls",
     "imageUrls",
+    "media",
+    "media.items",
+    "media.nodes",
     "all_listing_photos",
+    "allListingPhotos",
     "listing_details.photos",
     "listing_details.images",
     "listing_details.gallery",
+    "listing_details.media",
+    "listing_details.all_photos",
+    "listing_details.allPhotos",
     "listingDetails.photos",
     "listingDetails.images",
     "listingDetails.gallery",
+    "listingDetails.media",
+    "listingDetails.allPhotos",
   ];
 
   const primaryImagePaths = [
     "primary_listing_photo.photo_image_url",
     "primary_listing_photo.image_url",
+    "primary_listing_photo.uri",
+    "primaryListingPhoto.photo_image_url",
     "primaryListingPhoto.photoImageUrl",
     "primaryListingPhoto.imageUrl",
+    "primaryListingPhoto.image.uri",
+    "primaryListingPhoto.uri",
+    "primaryPhoto.imageUrl",
+    "primaryPhoto.url",
   ];
 
   imageCollectionPaths.forEach((path) => collectFromUnknown(getNestedValue(item, path)));
@@ -157,10 +238,10 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
       },
       body: JSON.stringify({
         includeListingDetails: true,
-        resultsLimit: 20,
+        resultsLimit: APIFY_RESULTS_LIMIT,
         startUrls: [{ url: targetUrl }],
       }),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(APIFY_REQUEST_TIMEOUT_MS),
     },
   ).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : "Error de red desconocido";
@@ -184,6 +265,8 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
     .map((rawItem) => {
       const item = rawItem as ApifyFacebookItem;
       const title = getFirstNonEmptyString(item, [
+        "listingTitle",
+        "listing_title",
         "marketplace_listing_title",
         "custom_title",
         "title",
@@ -197,16 +280,36 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
           "city",
         ]) || normalizedCity;
       const description =
-        getFirstNonEmptyString(item, [
+        getFirstNonEmptyText(item, [
+          "description.text",
+          "description",
+          "listing_description.text",
+          "listingDescription.text",
+          "listingDescription",
+          "listing_description_text",
+          "listing_description",
+          "detailed_description.text",
+          "detailed_description",
           "detailedDescription",
+          "detailedDescription.text",
+          "detailedDescription",
+          "listing_details.description.text",
+          "marketplace_listing_description_with_entities.text",
+          "marketplaceListingDescriptionWithEntities.text",
           "listing_details.description",
           "listingDetails.description",
           "marketplace_listing_description",
-          "listing_description",
           "description",
         ]) || title;
       const imageUrls = collectListingImageUrls(item);
-      const sourceUrl = getFirstNonEmptyString(item, ["listingUrl", "listing_url", "url"]);
+      const sourceUrl = getFirstNonEmptyString(item, [
+        "itemUrl",
+        "item_url",
+        "listingUrl",
+        "listing_url",
+        "marketplace_listing_url",
+        "url",
+      ]);
 
       const amount =
         getFirstNonEmptyString(item, [
