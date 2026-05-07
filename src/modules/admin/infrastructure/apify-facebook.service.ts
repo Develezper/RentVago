@@ -74,6 +74,38 @@ const getFirstNonEmptyText = (source: unknown, paths: string[]): string => {
   return "";
 };
 
+const cleanDescription = (value: string): string => {
+  const withoutHiddenMarkers = value
+    .replace(/\+?\d{1,4}[\s\-()]*\[\s*hidden information\s*\]/gi, "")
+    .replace(/\[\s*hidden information\s*\]/gi, "")
+    .replace(/\bhidden information\b/gi, "");
+
+  return withoutHiddenMarkers
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[ \t]{2,}/g, " ").trim())
+    .filter((line) => {
+      if (line.length === 0) {
+        return false;
+      }
+
+      if (/^\+?\d{1,4}[\s\-.,:;]*$/.test(line)) {
+        return false;
+      }
+
+      if (
+        /^(?:whats?app|wa|cel(?:ular)?|tel(?:efono)?|telefono|contacto)\s*[:\-]?\s*(?:\+?\d{1,4})?[\s\-.,:;]*$/i.test(
+          line,
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .join("\n")
+    .trim();
+};
+
 const isValidHttpUrl = (value: string): boolean => {
   return /^https?:\/\//i.test(value);
 };
@@ -279,7 +311,7 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
           "reverse_geocode.city",
           "city",
         ]) || normalizedCity;
-      const description =
+      const rawDescription =
         getFirstNonEmptyText(item, [
           "description.text",
           "description",
@@ -301,6 +333,7 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
           "marketplace_listing_description",
           "description",
         ]) || title;
+      const description = cleanDescription(rawDescription) || title;
       const imageUrls = collectListingImageUrls(item);
       const sourceUrl = getFirstNonEmptyString(item, [
         "itemUrl",
