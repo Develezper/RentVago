@@ -6,6 +6,7 @@ export type SearchPageSize = 6 | 12 | 24;
 
 export interface FilterState {
   query: string;
+  city: string;
   location: string;
   minPrice: string;
   maxPrice: string;
@@ -96,6 +97,7 @@ export const currencyFormat = new Intl.NumberFormat("es-CO", {
 
 export const defaultFilters: FilterState = {
   query: "",
+  city: "",
   location: "",
   minPrice: "",
   maxPrice: "",
@@ -131,12 +133,14 @@ export const buildSearchParams = (
   const params = new URLSearchParams();
 
   const query = filters.query.trim();
+  const city = filters.city.trim();
   const location = filters.location.trim();
   const minPrice = filters.minPrice.trim();
   const maxPrice = filters.maxPrice.trim();
   const rooms = filters.rooms.trim();
 
   if (query.length > 0) params.set("query", query);
+  if (city.length > 0) params.set("city", city);
   if (location.length > 0) params.set("location", location);
   if (minPrice.length > 0) params.set("minPrice", minPrice);
   if (maxPrice.length > 0) params.set("maxPrice", maxPrice);
@@ -167,6 +171,7 @@ export const parseStateFromUrl = (
   const params = new URLSearchParams(search);
 
   const query = params.get("query")?.trim() ?? "";
+  const city = params.get("city")?.trim() ?? "";
   const location = params.get("location")?.trim() ?? "";
   const minPrice = params.get("minPrice")?.trim() ?? "";
   const maxPrice = params.get("maxPrice")?.trim() ?? "";
@@ -179,6 +184,7 @@ export const parseStateFromUrl = (
 
   const hasUserParams =
     query.length > 0 ||
+    city.length > 0 ||
     location.length > 0 ||
     minPrice.length > 0 ||
     maxPrice.length > 0 ||
@@ -189,7 +195,7 @@ export const parseStateFromUrl = (
     pageSize !== PAGE_SIZE;
 
   return {
-    filters: { query, location, minPrice, maxPrice, rooms, verifiedOnly, sort },
+    filters: { query, city, location, minPrice, maxPrice, rooms, verifiedOnly, sort },
     page,
     pageSize,
     hasUserParams,
@@ -201,6 +207,7 @@ export const toNumericPrice = (value: string | number): number =>
 
 export const toFilterState = (saved: SavedSearchFilterItem): FilterState => ({
   query: saved.query ?? "",
+  city: "",
   location: saved.location ?? "",
   minPrice: saved.minPrice ?? "",
   maxPrice: saved.maxPrice ?? "",
@@ -211,6 +218,7 @@ export const toFilterState = (saved: SavedSearchFilterItem): FilterState => ({
 
 export const toSaveSearchFilterPayload = (filters: FilterState) => {
   const query = filters.query.trim();
+  const city = filters.city.trim();
   const location = filters.location.trim();
   const minPriceRaw = filters.minPrice.trim();
   const maxPriceRaw = filters.maxPrice.trim();

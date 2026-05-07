@@ -1,6 +1,7 @@
 import { FormEvent } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { CitySelector } from "@/components/ui/CitySelector";
 import { FavoriteButton } from "@/components/ui/favorite-button";
 import { PropertyImageCarousel } from "@/components/ui/property-image-carousel";
 import {
@@ -17,14 +18,18 @@ import {
 
 interface SearchHeroProps {
   query: string;
+  city: string;
   isSearchDisabled: boolean;
+  onCityChange: (value: string) => void;
   onQueryChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }
 
 export function SearchHero({
   query,
+  city,
   isSearchDisabled,
+  onCityChange,
   onQueryChange,
   onSubmit,
 }: SearchHeroProps) {
@@ -64,6 +69,15 @@ export function SearchHero({
             Buscar ahora
           </button>
         </form>
+
+        <div className="w-full sm:max-w-xs">
+          <CitySelector
+            id="city"
+            value={city}
+            allOptionLabel="Todas las sedes activas"
+            onChange={onCityChange}
+          />
+        </div>
       </div>
     </section>
   );
@@ -98,23 +112,17 @@ export function SearchFiltersPanel({
       <div className="mt-4 space-y-4">
         <div className="space-y-2">
           <label htmlFor="location" className="text-sm font-medium text-gray-400">
-            Ubicacion
+            Zona o barrio
           </label>
-          <select
+          <input
             id="location"
             name="location"
+            type="text"
             value={filters.location}
             onChange={(event) => onFilterChange("location", event.target.value)}
+            placeholder="Ej: Laureles, Robledo, El Poblado"
             className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">Todas las zonas</option>
-            <option value="Medellin">Medellin</option>
-            <option value="Envigado">Envigado</option>
-            <option value="Sabaneta">Sabaneta</option>
-            <option value="Bello">Bello</option>
-            <option value="Itagui">Itagui</option>
-            <option value="La Estrella">La Estrella</option>
-          </select>
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">

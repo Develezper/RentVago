@@ -52,6 +52,7 @@ const toServiceFilters = (
 
   return {
     query: filters.query.trim() || undefined,
+    city: filters.city.trim() || undefined,
     location: filters.location.trim() || undefined,
     minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
     maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,

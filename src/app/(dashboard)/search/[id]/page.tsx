@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FavoriteButton } from "@/components/ui/favorite-button";
 import { resolveAuthenticatedUserFromHeaders } from "@/lib/api-auth";
+import { resolveActiveCityByInput } from "@/modules/properties/domain/geography";
 import { favoritesUseCases } from "@/modules/properties/application/favorite.use-cases";
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 
@@ -23,6 +24,11 @@ const getAuthenticatedUserId = async (): Promise<string | null> => {
 
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
+  const matchedCity = resolveActiveCityByInput(id);
+  if (matchedCity) {
+    redirect(`/search?city=${matchedCity.slug}`);
+  }
+
   const property = await propertiesUseCases.getPropertyById(id);
   const userId = await getAuthenticatedUserId();
   const isFavorite =

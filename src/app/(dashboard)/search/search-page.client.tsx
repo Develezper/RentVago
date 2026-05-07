@@ -185,9 +185,10 @@ export function SearchPageClient({
   );
 
   const clearFilters = useCallback(() => {
-    setFilters(defaultFilters);
-    commitImmediate(defaultFilters);
-  }, [commitImmediate]);
+    const resetFilters: FilterState = { ...defaultFilters, city: filters.city };
+    setFilters(resetFilters);
+    commitImmediate(resetFilters);
+  }, [commitImmediate, filters.city]);
 
   const commitDraftFilters = useCallback(() => {
     commitImmediate(filters);
@@ -261,7 +262,9 @@ export function SearchPageClient({
     <div className="space-y-6">
       <SearchHero
         query={filters.query}
+        city={filters.city}
         isSearchDisabled={hasInvalidPriceRange}
+        onCityChange={(value) => setFilterValue("city", value)}
         onQueryChange={(value) => setFilterValue("query", value)}
         onSubmit={submitSearch}
       />

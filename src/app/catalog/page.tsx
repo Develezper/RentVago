@@ -1,4 +1,5 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
+import { CitySelector } from "@/components/ui/CitySelector";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 interface CatalogSearchParams {
   query?: string;
+  city?: string;
   minPrice?: string;
   maxPrice?: string;
 }
@@ -17,6 +19,7 @@ export default async function CatalogPage({
 }) {
   const params = await searchParams;
   const query = params.query?.trim() ?? "";
+  const city = params.city?.trim() ?? "";
   const minPrice = params.minPrice ? parseFloat(params.minPrice) : undefined;
   const maxPrice = params.maxPrice ? parseFloat(params.maxPrice) : undefined;
 
@@ -24,6 +27,7 @@ export default async function CatalogPage({
     page: 1,
     limit: 48,
     query,
+    city,
     minPrice,
     maxPrice,
   });
@@ -41,6 +45,14 @@ export default async function CatalogPage({
         </div>
 
         <form method="GET" className="mb-10 flex flex-col sm:flex-row gap-3">
+          <div className="w-full sm:w-56">
+            <CitySelector
+              id="catalog-city"
+              name="city"
+              value={city}
+              allOptionLabel="Todas las sedes"
+            />
+          </div>
           <input
             name="query"
             defaultValue={query}

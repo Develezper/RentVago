@@ -9,6 +9,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
     const limit = Math.min(48, Math.max(1, parseInt(params.get("limit") ?? "12", 10)));
     const query = params.get("query")?.trim() ?? "";
+    const city = params.get("city")?.trim() ?? "";
     const minPrice = params.get("minPrice") ? parseFloat(params.get("minPrice")!) : undefined;
     const maxPrice = params.get("maxPrice") ? parseFloat(params.get("maxPrice")!) : undefined;
 
@@ -16,6 +17,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       page,
       limit,
       query,
+      city,
       minPrice,
       maxPrice,
     });
