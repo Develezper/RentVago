@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { adminService } from "@/services/admin.service";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
-    const users = await adminService.getAllUsers();
+    const users = await adminUseCases.getAllUsers();
     const data = users.map((u) => ({
       ...u,
       createdAt: u.createdAt.toISOString(),

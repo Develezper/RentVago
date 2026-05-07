@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { adminService } from "@/services/admin.service";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -33,10 +33,10 @@ export async function PUT(
     const payload = userUpdateSchema.parse(body);
 
     if (payload.role !== undefined) {
-      await adminService.updateUserRole(id, payload.role);
+      await adminUseCases.updateUserRole(id, payload.role);
     }
     if (payload.isActive !== undefined) {
-      await adminService.toggleUserStatus(id, payload.isActive);
+      await adminUseCases.toggleUserStatus(id, payload.isActive);
     }
 
     return NextResponse.json({ data: { updated: true } }, { status: 200 });

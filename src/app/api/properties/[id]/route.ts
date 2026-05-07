@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -9,22 +9,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const property = await prisma.property.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        images: true,
-        price: true,
-        location: true,
-        rooms: true,
-        type: true,
-        isScraped: true,
-        createdAt: true,
-        owner: { select: { id: true, name: true } },
-      },
-    });
+    const property = await propertiesUseCases.getPublicPropertyById(id);
 
     if (!property) {
       return NextResponse.json({ error: "Propiedad no encontrada." }, { status: 404 });

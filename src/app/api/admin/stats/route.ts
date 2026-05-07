@@ -4,7 +4,7 @@ import {
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
-import { adminService } from "@/services/admin.service";
+import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const user = await requireAuthenticatedUser(request);
     requireRole(user, ["ADMIN"]);
     const [stats, metrics] = await Promise.all([
-      adminService.getStats(),
-      adminService.getDashboardMetrics(),
+      adminUseCases.getStats(),
+      adminUseCases.getDashboardMetrics(),
     ]);
     return NextResponse.json({ data: { stats, metrics } }, { status: 200 });
   } catch (error: unknown) {
