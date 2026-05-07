@@ -6,6 +6,7 @@ export interface PropertySearchFilters {
   minPrice?: number;
   maxPrice?: number;
   rooms?: number;
+  verifiedOnly?: boolean;
   sort?: "relevance" | "newest" | "priceAsc" | "priceDesc";
   page: number;
   pageSize: number;
@@ -16,6 +17,7 @@ export interface PropertySearchItem {
   title: string;
   description: string;
   imageUrl: string;
+  images: string[];
   price: number | string;
   location: string;
   rooms: number;

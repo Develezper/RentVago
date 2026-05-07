@@ -77,6 +77,7 @@ export interface ScrapedPropertyInput {
   description: string;
   price: number;
   location: string;
+  imageUrls?: string[];
   imageUrl?: string;
   sourceUrl: string;
 }

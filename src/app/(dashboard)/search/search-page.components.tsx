@@ -2,6 +2,7 @@ import { FormEvent } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { FavoriteButton } from "@/components/ui/favorite-button";
+import { PropertyImageCarousel } from "@/components/ui/property-image-carousel";
 import {
   currencyFormat,
   FilterState,
@@ -173,6 +174,20 @@ export function SearchFiltersPanel({
             <option value="4">4+</option>
           </select>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onFilterChange("verifiedOnly", !filters.verifiedOnly)}
+          className={`h-11 w-full rounded-2xl border px-4 text-sm font-semibold transition ${
+            filters.verifiedOnly
+              ? "border-green-500 bg-green-500/10 text-green-300"
+              : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-600 hover:text-white"
+          }`}
+        >
+          {filters.verifiedOnly
+            ? "Mostrando Publicaciones Verificadas"
+            : "Mostrar solo Publicaciones Verificadas"}
+        </button>
 
         <button
           type="button"
@@ -348,20 +363,14 @@ export function PropertyGrid({
               }
               className="absolute right-3 top-3 z-10"
             />
-            <Link href={`/search/${property.id}`} className="block">
-              <div
-                className="relative h-36 bg-linear-to-br from-green-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
-                style={{
-                  backgroundImage: property.imageUrl
-                    ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${property.imageUrl})`
-                    : undefined,
-                }}
-              >
-                <span className="absolute bottom-3 left-3 rounded-full bg-black/80 px-3 py-1 text-xs font-semibold text-gray-300">
-                  Propiedad
-                </span>
-              </div>
-            </Link>
+
+            <PropertyImageCarousel
+              images={property.images}
+              alt={property.title}
+              heightClassName="h-36"
+              badgeLabel="Propiedad"
+            />
+
             <div className="space-y-3 p-4">
               <div>
                 <h3 className="line-clamp-2 text-base font-semibold text-white">

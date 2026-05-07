@@ -50,6 +50,7 @@ const buildFilterSummary = (filters: ParsedPropertySearchQuery): string => {
     filters.minPrice !== undefined ? `Precio min: ${toPriceText(filters.minPrice)}` : null,
     filters.maxPrice !== undefined ? `Precio max: ${toPriceText(filters.maxPrice)}` : null,
     filters.rooms !== undefined ? `Habitaciones: ${filters.rooms}+` : null,
+    filters.verifiedOnly ? "Solo verificadas" : null,
   ].filter((item): item is string => item !== null);
 
   if (items.length === 0) return "Filtros: sin filtros adicionales";

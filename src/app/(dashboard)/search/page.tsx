@@ -56,6 +56,7 @@ const toServiceFilters = (
     minPrice: Number.isFinite(minPrice) ? minPrice : undefined,
     maxPrice: Number.isFinite(maxPrice) ? maxPrice : undefined,
     rooms: Number.isFinite(rooms) ? rooms : undefined,
+    verifiedOnly: filters.verifiedOnly,
     sort: filters.sort,
     page,
     pageSize,

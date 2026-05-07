@@ -8,10 +8,18 @@ export interface ParsedPropertySearchQuery {
   minPrice?: number;
   maxPrice?: number;
   rooms?: number;
+  verifiedOnly?: boolean;
   page: number;
   pageSize: number;
   sort: PropertySearchSort;
 }
+
+const toOptionalBoolean = (value: string | null): boolean | undefined => {
+  if (value === null) return undefined;
+  if (value === "1" || value.toLowerCase() === "true") return true;
+  if (value === "0" || value.toLowerCase() === "false") return false;
+  return undefined;
+};
 
 const asOptionalString = (value: string | null): string | undefined => {
   if (value === null) {
@@ -59,6 +67,7 @@ const createSearchQuerySchema = (defaultPageSize: number) => {
         toOptionalNumber,
         z.number().int().min(1).max(20).optional(),
       ),
+      verifiedOnly: z.boolean().optional(),
       page: z.preprocess(toOptionalNumber, z.number().int().min(1).default(1)),
       pageSize: z.preprocess(
         toOptionalNumber,
@@ -97,6 +106,7 @@ export const parsePropertySearchQuery = (
     minPrice: params.get("minPrice") ?? undefined,
     maxPrice: params.get("maxPrice") ?? undefined,
     rooms: params.get("rooms") ?? undefined,
+    verifiedOnly: toOptionalBoolean(params.get("verifiedOnly")),
     page: params.get("page") ?? undefined,
     pageSize: params.get("pageSize") ?? undefined,
     sort: asOptionalString(params.get("sort")),

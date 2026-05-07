@@ -1,5 +1,7 @@
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 import type { CreatePropertyDTO } from "@/modules/properties/domain/property.types";
+import { normalizePositivePriceToNumber } from "@/modules/properties/infrastructure/price-helper";
+import { UploadPropertyImagesUseCase } from "@/modules/properties/application/upload-property-images.use-case";
 import { z } from "zod";
 
 const asOptionalString = (value: unknown): unknown => {
@@ -15,7 +17,7 @@ const toOptionalNumber = (value: unknown): unknown => {
   if (value === undefined) return undefined;
   if (typeof value === "string" && value.trim().length === 0) return undefined;
   if (typeof value === "number") return value;
-  if (typeof value === "string") return Number(value);
+  if (typeof value === "string") return normalizePositivePriceToNumber(value);
   return value;
 };
 
@@ -34,10 +36,18 @@ const createDirectPropertySchema = z
   .strict();
 
 export class CreateDirectPropertyUseCase {
-  constructor(private readonly repository: PropertiesRepository) {}
+  constructor(
+    private readonly repository: PropertiesRepository,
+    private readonly uploadPropertyImagesUseCase: UploadPropertyImagesUseCase =
+      new UploadPropertyImagesUseCase(),
+  ) {}
 
   async execute(input: unknown, ownerId: string): Promise<{ id: string }> {
     const payload = createDirectPropertySchema.parse(input);
+    const images = await this.uploadPropertyImagesUseCase.execute({
+      images: payload.images,
+      source: "DIRECT",
+    });
 
     const data: CreatePropertyDTO = {
       title: payload.title,
@@ -48,7 +58,7 @@ export class CreateDirectPropertyUseCase {
       price: payload.price,
       rooms: payload.rooms,
       type: payload.type,
-      images: payload.images,
+      images,
     };
 
     return this.repository.createDirectProperty(data, ownerId);

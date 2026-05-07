@@ -154,13 +154,20 @@ class PrismaAdminRepository implements AdminRepository {
   }
 
   async upsertScrapedProperty(input: ScrapedPropertyInput): Promise<void> {
+    const images =
+      input.imageUrls && input.imageUrls.length > 0
+        ? input.imageUrls
+        : input.imageUrl
+          ? [input.imageUrl]
+          : [];
+
     await prisma.property.upsert({
       where: { sourceUrl: input.sourceUrl },
       update: {
         title: input.title,
         description: input.description,
         price: input.price,
-        images: input.imageUrl ? [input.imageUrl] : [],
+        images,
         status: PropertyStatus.AVAILABLE,
       },
       create: {
@@ -168,7 +175,7 @@ class PrismaAdminRepository implements AdminRepository {
         description: input.description,
         price: input.price,
         location: input.location,
-        images: input.imageUrl ? [input.imageUrl] : [],
+        images,
         sourceUrl: input.sourceUrl,
         isScraped: true,
         type: PropertyType.APARTAMENTO,

@@ -1,4 +1,6 @@
 import axios from "axios";
+import { UploadPropertyImagesUseCase } from "@/modules/properties/application/upload-property-images.use-case";
+import { normalizePositivePriceToNumber } from "@/modules/properties/infrastructure/price-helper";
 import { adminRepository } from "@/modules/admin/infrastructure/admin.repository";
 
 interface ApifyFBItem {
@@ -16,6 +18,7 @@ interface ScrapedProperty {
   description: string;
   price: number;
   location: string;
+  imageUrls: string[];
   imageUrl: string | undefined;
   sourceUrl: string;
 }
@@ -29,6 +32,7 @@ const wait = async (ms: number): Promise<void> => {
 };
 
 const runApifyScraper = async (fbUrl: string): Promise<{ saved: number; discarded: number }> => {
+  const uploadPropertyImagesUseCase = new UploadPropertyImagesUseCase();
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("APIFY_TOKEN no está definido en .env");
 
@@ -98,15 +102,20 @@ const runApifyScraper = async (fbUrl: string): Promise<{ saved: number; discarde
     const title = (item.marketplace_listing_title ?? "").trim();
     const priceRaw =
       item["listing_price.amount"] ?? item["listing_price.formatted_amount"] ?? "0";
-    const price = parseFloat(priceRaw.replace(/[^\d.]/g, ""));
+    const price = normalizePositivePriceToNumber(priceRaw) ?? 0;
     const sourceUrl = item.listingUrl ?? `fb-marketplace-${item.id ?? i}`;
     const imageUrl = item["primary_listing_photo.photo_image_url"] ?? undefined;
+    const imageUrls = await uploadPropertyImagesUseCase.execute({
+      images: imageUrl ? [imageUrl] : [],
+      source: "SCRAPING",
+    });
 
     const scraped: ScrapedProperty = {
       title,
       description: item.description ?? "",
       price: Number.isNaN(price) ? 0 : price,
       location: "Facebook Marketplace",
+      imageUrls,
       imageUrl,
       sourceUrl,
     };

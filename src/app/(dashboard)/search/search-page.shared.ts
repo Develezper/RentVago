@@ -10,6 +10,7 @@ export interface FilterState {
   minPrice: string;
   maxPrice: string;
   rooms: string;
+  verifiedOnly: boolean;
   sort: SearchSort;
 }
 
@@ -18,6 +19,7 @@ export interface PropertyItem {
   title: string;
   description: string;
   imageUrl: string;
+  images: string[];
   price: number | string;
   location: string;
   rooms: number;
@@ -52,6 +54,7 @@ const propertyItemSchema = z.object({
   title: z.string(),
   description: z.string(),
   imageUrl: z.string(),
+  images: z.array(z.string()),
   price: z.union([z.number(), z.string()]),
   location: z.string(),
   rooms: z.number().int(),
@@ -97,6 +100,7 @@ export const defaultFilters: FilterState = {
   minPrice: "",
   maxPrice: "",
   rooms: "",
+  verifiedOnly: false,
   sort: "relevance",
 };
 
@@ -137,6 +141,7 @@ export const buildSearchParams = (
   if (minPrice.length > 0) params.set("minPrice", minPrice);
   if (maxPrice.length > 0) params.set("maxPrice", maxPrice);
   if (rooms.length > 0) params.set("rooms", rooms);
+  if (filters.verifiedOnly) params.set("verifiedOnly", "1");
 
   params.set("sort", filters.sort);
   params.set("page", String(page));
@@ -166,6 +171,7 @@ export const parseStateFromUrl = (
   const minPrice = params.get("minPrice")?.trim() ?? "";
   const maxPrice = params.get("maxPrice")?.trim() ?? "";
   const rooms = params.get("rooms")?.trim() ?? "";
+  const verifiedOnly = params.get("verifiedOnly") === "1";
   const sortParam = params.get("sort");
   const sort: SearchSort = isSearchSort(sortParam) ? sortParam : "relevance";
   const page = parsePositiveInt(params.get("page"));
@@ -177,12 +183,13 @@ export const parseStateFromUrl = (
     minPrice.length > 0 ||
     maxPrice.length > 0 ||
     rooms.length > 0 ||
+    verifiedOnly ||
     isSearchSort(sortParam) ||
     page > 1 ||
     pageSize !== PAGE_SIZE;
 
   return {
-    filters: { query, location, minPrice, maxPrice, rooms, sort },
+    filters: { query, location, minPrice, maxPrice, rooms, verifiedOnly, sort },
     page,
     pageSize,
     hasUserParams,
@@ -198,6 +205,7 @@ export const toFilterState = (saved: SavedSearchFilterItem): FilterState => ({
   minPrice: saved.minPrice ?? "",
   maxPrice: saved.maxPrice ?? "",
   rooms: saved.rooms === null ? "" : String(saved.rooms),
+  verifiedOnly: false,
   sort: "relevance",
 });
 

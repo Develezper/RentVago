@@ -1,8 +1,8 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, MapPin, BedDouble, Tag } from "lucide-react";
+import { PropertyImageCarousel } from "@/components/ui/property-image-carousel";
 
 export default async function CatalogPropertyPage({
   params,
@@ -15,9 +15,6 @@ export default async function CatalogPropertyPage({
 
   if (!property) notFound();
 
-  const mainImage = property.images[0] ?? "";
-  const gallery = property.images.slice(1, 5);
-
   return (
     <main className="min-h-screen bg-gray-950 text-white">
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
@@ -29,36 +26,15 @@ export default async function CatalogPropertyPage({
           Volver al catálogo
         </Link>
 
-        <div className="relative h-72 sm:h-96 rounded-2xl overflow-hidden bg-gray-900 mb-6">
-          {mainImage ? (
-            <Image
-              src={mainImage}
-              alt={property.title}
-              fill
-              className="object-cover"
-              unoptimized
-              priority
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-700 text-6xl">🏠</div>
-          )}
+        <div className="mb-8">
+          <PropertyImageCarousel
+            images={property.images}
+            alt={property.title}
+            showThumbnails={true}
+            heightClassName="h-72 sm:h-96"
+            badgeLabel="Catálogo RentVago"
+          />
         </div>
-
-        {gallery.length > 0 && (
-          <div className="grid grid-cols-4 gap-3 mb-8">
-            {gallery.map((img, i) => (
-              <div key={i} className="relative h-20 rounded-xl overflow-hidden bg-gray-900">
-                <Image
-                  src={img}
-                  alt={`${property.title} ${i + 2}`}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="bg-black rounded-2xl border border-gray-800 p-8">
           <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">

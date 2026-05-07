@@ -50,6 +50,10 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       conditions.push(Prisma.sql`"price" <= ${filters.maxPrice}`);
     }
 
+    if (filters.verifiedOnly) {
+      conditions.push(Prisma.sql`"isScraped" = false`);
+    }
+
     const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
 
     const orderByClause = (() => {
@@ -68,6 +72,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         title: string;
         description: string;
         imageUrl: string;
+        images: string[];
         price: number | string;
         location: string;
         rooms: number;
@@ -77,6 +82,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
           "title",
           "description",
           COALESCE("images"[1], '') AS "imageUrl",
+          COALESCE("images", ARRAY[]::text[]) AS "images",
           "price",
           "location",
           COALESCE("rooms", 0) AS "rooms"
