@@ -78,6 +78,24 @@ const getAuthenticatedViewer = async (): Promise<{
   return { userId: authenticatedUser.userId, role: authenticatedUser.role };
 };
 
+const toSerializablePrice = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  ) {
+    const parsed = Number(value.toString());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = await searchParams;
   const params = toUrlSearchParams(resolvedSearchParams);
@@ -100,6 +118,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     results.meta.pageSize === 6 || results.meta.pageSize === 24
       ? results.meta.pageSize
       : PAGE_SIZE;
+  const initialProperties = results.data.map((property) => ({
+    ...property,
+    price: toSerializablePrice(property.price),
+  }));
 
   return (
     <Suspense fallback={<SearchLoadingSkeleton />}>
@@ -107,7 +129,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         key={queryString || "default-search"}
         initialFilters={initialState.filters}
         savedSearchFilters={savedSearchFilters}
-        initialProperties={results.data}
+        initialProperties={initialProperties}
         initialFavoritePropertyIds={favoritePropertyIds}
         currentPage={results.meta.page}
         currentPageSize={currentPageSize}
