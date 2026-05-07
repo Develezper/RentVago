@@ -1,15 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import {
+  FEATURED_PROPERTY_DURATION_DAYS,
+  FEATURED_PROPERTY_PRICE_COP,
+} from "@/modules/properties/domain/feature.constants";
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 import type { PaymentOrder } from "@/modules/properties/domain/property.types";
-
-const FEATURE_DURATION_DAYS = 30;
-const FEATURE_PRICE_COP = 59000;
 
 const featurePropertySchema = z
   .object({
     propertyId: z.string().uuid(),
     ownerId: z.string().uuid(),
+    paymentValidation: z
+      .object({
+        status: z.literal("PAID"),
+        amount: z.number().positive().finite(),
+        currency: z.literal("COP"),
+        paidAt: z.coerce.date(),
+        checkoutTokenId: z.string().uuid(),
+      })
+      .strict(),
   })
   .strict();
 
@@ -19,7 +29,9 @@ export class FeaturePropertyUseCaseError extends Error {
       | "PROPERTY_NOT_FOUND"
       | "FORBIDDEN"
       | "PROPERTY_NOT_OWNED"
-      | "INVALID_STATUS",
+      | "INVALID_STATUS"
+      | "ALREADY_FEATURED"
+      | "INVALID_PAYMENT",
     message: string,
   ) {
     super(message);
@@ -77,17 +89,34 @@ export class FeaturePropertyUseCase {
       );
     }
 
-    // Simula una validacion de pago aprobada por un gateway externo.
-    const paidAt = new Date();
-    const featuredUntil = addDays(paidAt, FEATURE_DURATION_DAYS);
+    const hasActiveFeature =
+      property.isFeatured &&
+      (property.featuredUntil === null || property.featuredUntil.getTime() >= Date.now());
+
+    if (hasActiveFeature) {
+      throw new FeaturePropertyUseCaseError(
+        "ALREADY_FEATURED",
+        "La propiedad ya tiene una destacacion activa.",
+      );
+    }
+
+    if (payload.paymentValidation.amount !== FEATURED_PROPERTY_PRICE_COP) {
+      throw new FeaturePropertyUseCaseError(
+        "INVALID_PAYMENT",
+        "Monto de pago invalido para la destacacion premium.",
+      );
+    }
+
+    const paidAt = payload.paymentValidation.paidAt;
+    const featuredUntil = addDays(paidAt, FEATURED_PROPERTY_DURATION_DAYS);
 
     const paymentOrder: PaymentOrder = {
-      id: randomUUID(),
+      id: payload.paymentValidation.checkoutTokenId || randomUUID(),
       propertyId: property.id,
       ownerId: payload.ownerId,
-      amount: FEATURE_PRICE_COP,
-      currency: "COP",
-      status: "PAID",
+      amount: payload.paymentValidation.amount,
+      currency: payload.paymentValidation.currency,
+      status: payload.paymentValidation.status,
       createdAt: paidAt,
       paidAt,
     };

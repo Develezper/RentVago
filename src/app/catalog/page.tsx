@@ -1,6 +1,6 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { CitySelector } from "@/components/ui/CitySelector";
-import Image from "next/image";
+import { PropertyCard } from "@/components/ui/property-card";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,24 @@ export default async function CatalogPage({
     minPrice,
     maxPrice,
   });
+
+  const prefilledSearchParams = new URLSearchParams();
+  if (query.length > 0) prefilledSearchParams.set("query", query);
+  if (city.length > 0) prefilledSearchParams.set("city", city);
+  if (params.minPrice?.trim()) prefilledSearchParams.set("minPrice", params.minPrice);
+  if (params.maxPrice?.trim()) prefilledSearchParams.set("maxPrice", params.maxPrice);
+
+  const prefixedSearchHref = prefilledSearchParams.size
+    ? `/search?${prefilledSearchParams.toString()}`
+    : "/search";
+  const activateAlertHref = `/login?next=${encodeURIComponent(prefixedSearchHref)}`;
+
+  const activeFilters = [
+    city ? `Ciudad: ${city}` : null,
+    query ? `Busqueda: ${query}` : null,
+    params.minPrice ? `Min: ${Number(params.minPrice).toLocaleString("es-CO")}` : null,
+    params.maxPrice ? `Max: ${Number(params.maxPrice).toLocaleString("es-CO")}` : null,
+  ].filter((value): value is string => value !== null);
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -82,65 +100,59 @@ export default async function CatalogPage({
         </form>
 
         {properties.length === 0 ? (
-          <div className="text-center py-32 bg-black rounded-2xl border border-gray-800">
-            <p className="text-gray-500 text-xl font-medium">
-              No hay propiedades que coincidan con estos filtros.
-            </p>
-            <Link
-              href="/catalog"
-              className="mt-6 inline-block text-green-400 font-bold hover:text-green-300 transition-colors"
-            >
-              Limpiar filtros
-            </Link>
+          <div className="relative overflow-hidden rounded-3xl border border-gray-800 bg-black px-6 py-16 text-center">
+            <div className="pointer-events-none absolute inset-0 bg-radial-[ellipse_at_top] from-green-500/12 via-transparent to-transparent" />
+            <div className="relative mx-auto max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-400">
+                Sin coincidencias por ahora
+              </p>
+              <h2 className="mt-3 text-3xl font-black text-white">
+                No encontramos resultados para esta busqueda
+              </h2>
+              <p className="mt-4 text-sm text-gray-400">
+                Convierte esta busqueda en una oportunidad: activa una alerta y te avisaremos
+                apenas entre una propiedad que haga match con estos criterios.
+              </p>
+
+              {activeFilters.length > 0 ? (
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  {activeFilters.map((filter) => (
+                    <span
+                      key={filter}
+                      className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-300"
+                    >
+                      {filter}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  href={activateAlertHref}
+                  className="inline-flex h-12 items-center rounded-2xl bg-green-500 px-6 text-sm font-extrabold text-black transition hover:bg-green-400"
+                >
+                  Activar Alerta de Match Inmediato
+                </Link>
+                <Link
+                  href="/catalog"
+                  className="inline-flex h-12 items-center rounded-2xl border border-gray-700 bg-gray-900 px-6 text-sm font-semibold text-gray-300 transition hover:border-gray-600 hover:text-white"
+                >
+                  Limpiar filtros
+                </Link>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => {
-              const imageUrl = property.images[0] ?? "";
-              return (
-                <Link
-                  key={property.id}
-                  href={`/catalog/${property.id}`}
-                  className="bg-black rounded-2xl border border-gray-800 overflow-hidden hover:border-green-500/40 transition-colors block"
-                >
-                  <div className="relative h-48 bg-gray-900">
-                    {imageUrl ? (
-                      <Image
-                        src={imageUrl}
-                        alt={property.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-700 text-4xl">
-                        🏠
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h2 className="font-bold text-white text-lg leading-tight line-clamp-2">
-                        {property.title}
-                      </h2>
-                      <span className="shrink-0 text-xs font-bold uppercase bg-gray-800 text-gray-400 px-2 py-1 rounded-lg">
-                        {property.type}
-                      </span>
-                    </div>
-                    <p className="text-gray-500 text-sm mb-1">{property.location}</p>
-                    {property.rooms != null && (
-                      <p className="text-gray-500 text-sm mb-3">
-                        {property.rooms} habitación{property.rooms !== 1 ? "es" : ""}
-                      </p>
-                    )}
-                    <p className="text-green-400 font-black text-xl">
-                      ${Number(property.price).toLocaleString("es-CO")}
-                      <span className="text-gray-500 font-normal text-sm"> /mes</span>
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+            {properties.map((property, index) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                className="h-full"
+                priority={index < 3}
+              />
+            ))}
           </div>
         )}
 

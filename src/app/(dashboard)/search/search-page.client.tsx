@@ -1,10 +1,13 @@
 "use client";
 
-import { ReactNode, useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  PropertyGrid,
+  SearchEmptyState,
   SearchFiltersPanel,
   SearchHero,
+  SearchLoadingSkeleton,
   SearchPagination,
   SearchResultsToolbar,
 } from "./search-page.components";
@@ -12,6 +15,7 @@ import {
   buildSearchParams,
   defaultFilters,
   type FilterState,
+  type PropertyItem,
   type SavedSearchFilterItem,
   type SearchMeta,
   type SearchPageSize,
@@ -24,12 +28,13 @@ import { toast } from "sonner";
 interface SearchPageClientProps {
   initialFilters: FilterState;
   savedSearchFilters: SavedSearchFilterItem[];
+  initialProperties: PropertyItem[];
+  initialFavoritePropertyIds: string[];
   currentPage: number;
   currentPageSize: SearchPageSize;
   meta: SearchMeta;
   viewerRole: ViewerRole;
   pdfDownloadHref: string;
-  children: ReactNode;
 }
 
 interface RequestResult {
@@ -107,12 +112,13 @@ const requestSaveSearchFilter = async (filters: FilterState): Promise<RequestRes
 export function SearchPageClient({
   initialFilters,
   savedSearchFilters,
+  initialProperties,
+  initialFavoritePropertyIds,
   currentPage,
   currentPageSize,
   meta,
   viewerRole,
   pdfDownloadHref,
-  children,
 }: SearchPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -256,7 +262,43 @@ export function SearchPageClient({
     navigateToState(filters, Math.min(meta.totalPages, currentPage + 1), pageSize);
   }, [currentPage, filters, meta.totalPages, navigateToState, pageSize]);
 
-  const resultsContent = useMemo(() => children, [children]);
+  const resultsContent = useMemo(() => {
+    if (isPending) {
+      return <SearchLoadingSkeleton items={pageSize} />;
+    }
+
+    if (meta.total === 0) {
+      return (
+        <SearchEmptyState
+          city={filters.city}
+          query={filters.query}
+          isAlertActive={isSearchAlertActive}
+          isActivatingAlert={isSavingSearchFilter}
+          canActivateAlert={!hasInvalidPriceRange}
+          onActivateImmediateAlert={saveSearchFilter}
+        />
+      );
+    }
+
+    return (
+      <PropertyGrid
+        properties={initialProperties}
+        favoritePropertyIds={initialFavoritePropertyIds}
+      />
+    );
+  }, [
+    filters.city,
+    filters.query,
+    hasInvalidPriceRange,
+    initialFavoritePropertyIds,
+    initialProperties,
+    isPending,
+    isSavingSearchFilter,
+    isSearchAlertActive,
+    meta.total,
+    pageSize,
+    saveSearchFilter,
+  ]);
 
   return (
     <div className="space-y-6">

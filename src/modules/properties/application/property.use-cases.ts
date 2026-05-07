@@ -72,6 +72,13 @@ const listPropertyOptions = () => {
 const featureProperty = (input: {
   propertyId: string;
   ownerId: string;
+  paymentValidation: {
+    status: "PAID";
+    amount: number;
+    currency: "COP";
+    paidAt: Date;
+    checkoutTokenId: string;
+  };
 }): Promise<FeaturePropertyResult> => {
   return featurePropertyUseCase.execute(input);
 };

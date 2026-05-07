@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { CitySelector } from "@/components/ui/CitySelector";
 import { FavoriteButton } from "@/components/ui/favorite-button";
+import { PropertyCardSkeleton } from "@/components/ui/property-card";
 import { PropertyImageCarousel } from "@/components/ui/property-image-carousel";
 import {
   currencyFormat,
@@ -306,35 +307,87 @@ export function SearchResultsToolbar({
   );
 }
 
-export function SearchLoadingSkeleton() {
+interface SearchLoadingSkeletonProps {
+  items?: number;
+}
+
+export function SearchLoadingSkeleton({ items = 6 }: SearchLoadingSkeletonProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={`skeleton-${index}`}
-          className="animate-pulse overflow-hidden rounded-2xl border border-gray-800 bg-black shadow-sm"
-        >
-          <div className="h-36 bg-gray-800" />
-          <div className="space-y-3 p-4">
-            <div className="h-4 rounded bg-gray-800" />
-            <div className="h-4 w-2/3 rounded bg-gray-800" />
-            <div className="h-5 w-1/2 rounded bg-gray-800" />
-          </div>
-        </div>
+      {Array.from({ length: items }).map((_, index) => (
+        <PropertyCardSkeleton
+          key={`search-skeleton-${index}`}
+          imageHeightClassName="h-36"
+        />
       ))}
     </div>
   );
 }
 
-export function SearchEmptyState() {
+interface SearchEmptyStateProps {
+  city?: string;
+  query?: string;
+  isAlertActive: boolean;
+  isActivatingAlert: boolean;
+  canActivateAlert: boolean;
+  onActivateImmediateAlert: () => void;
+}
+
+export function SearchEmptyState({
+  city,
+  query,
+  isAlertActive,
+  isActivatingAlert,
+  canActivateAlert,
+  onActivateImmediateAlert,
+}: SearchEmptyStateProps) {
+  const searchSummary = [
+    city?.trim() ? `Ciudad: ${city.trim()}` : null,
+    query?.trim() ? `Busqueda: ${query.trim()}` : null,
+  ].filter((value): value is string => value !== null);
+
   return (
-    <div className="rounded-2xl border border-gray-800 bg-black px-4 py-10 text-center shadow-sm">
-      <p className="text-base font-medium text-white">
-        No encontramos propiedades con esos filtros.
-      </p>
-      <p className="mt-1 text-sm text-gray-400">
-        Ajusta el rango de precios o la ubicacion para ampliar resultados.
-      </p>
+    <div className="relative overflow-hidden rounded-3xl border border-gray-800 bg-black px-4 py-10 text-center shadow-sm sm:px-6">
+      <div className="pointer-events-none absolute inset-0 bg-radial-[ellipse_at_top] from-green-500/12 via-transparent to-transparent" />
+      <div className="relative mx-auto max-w-xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-400">
+          Cero resultados
+        </p>
+        <p className="mt-2 text-lg font-bold text-white">
+          No encontramos propiedades con esos filtros.
+        </p>
+        <p className="mt-2 text-sm text-gray-400">
+          Evita perder esta oportunidad: activa una alerta para recibir el primer match
+          disponible con tus criterios actuales.
+        </p>
+
+        {searchSummary.length > 0 ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {searchSummary.map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1 text-xs font-semibold text-gray-300"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onActivateImmediateAlert}
+          disabled={!canActivateAlert || isActivatingAlert || isAlertActive}
+          className="mt-6 inline-flex h-11 items-center gap-2 rounded-2xl bg-green-500 px-5 text-sm font-extrabold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Bell className="h-4 w-4" />
+          {isActivatingAlert
+            ? "Activando alerta..."
+            : isAlertActive
+              ? "Alerta activa para esta busqueda"
+              : "Activar Alerta de Match Inmediato"}
+        </button>
+      </div>
     </div>
   );
 }

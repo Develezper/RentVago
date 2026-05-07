@@ -19,6 +19,7 @@ interface PropertyCardProps {
   property: PropertyCardItem;
   hrefBasePath?: string;
   className?: string;
+  priority?: boolean;
 }
 
 const currencyFormat = new Intl.NumberFormat("es-CO", {
@@ -31,6 +32,7 @@ export function PropertyCard({
   property,
   hrefBasePath = "/catalog",
   className,
+  priority = false,
 }: PropertyCardProps) {
   const imageUrl = property.images[0] ?? "";
   const [isImageLoading, setIsImageLoading] = useState(imageUrl.length > 0);
@@ -53,10 +55,11 @@ export function PropertyCard({
               src={imageUrl}
               alt={property.title}
               fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              priority={priority}
               className={`object-cover transition-opacity duration-300 ${
                 isImageLoading ? "opacity-0" : "opacity-100"
               }`}
-              unoptimized
               onLoad={() => setIsImageLoading(false)}
               onError={() => {
                 setHasImageError(true);
@@ -95,5 +98,30 @@ export function PropertyCard({
         <p className="line-clamp-2 text-sm text-gray-400">{property.description}</p>
       </div>
     </Link>
+  );
+}
+
+interface PropertyCardSkeletonProps {
+  imageHeightClassName?: string;
+  className?: string;
+}
+
+export function PropertyCardSkeleton({
+  imageHeightClassName = "h-44",
+  className,
+}: PropertyCardSkeletonProps) {
+  const skeletonClasses =
+    "animate-pulse overflow-hidden rounded-2xl border border-gray-800 bg-black shadow-sm";
+
+  return (
+    <div className={className ? `${skeletonClasses} ${className}` : skeletonClasses}>
+      <div className={`${imageHeightClassName} bg-gray-800`} />
+      <div className="space-y-3 p-4">
+        <div className="h-4 rounded bg-gray-800" />
+        <div className="h-4 w-2/3 rounded bg-gray-800" />
+        <div className="h-5 w-1/2 rounded bg-gray-800" />
+        <div className="h-3 w-5/6 rounded bg-gray-800" />
+      </div>
+    </div>
   );
 }

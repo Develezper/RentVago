@@ -76,7 +76,7 @@ export function FavoritesGrid({ favorites, onToggle }: FavoritesGridProps) {
           />
           <Link href={`/search/${favorite.propertyId}`} className="block">
             <div
-              className="relative h-36 bg-gradient-to-br from-red-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
+              className="relative h-36 bg-linear-to-br from-red-900/20 via-gray-800 to-gray-900 bg-cover bg-center"
               style={{
                 backgroundImage: favorite.property.imageUrl
                   ? `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1)), url(${favorite.property.imageUrl})`
