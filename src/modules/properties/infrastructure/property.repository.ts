@@ -1,6 +1,7 @@
 import { PropertyStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveActiveCityByInput } from "@/modules/properties/domain/geography";
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 import type {
   AdminPropertyCreateInput,
@@ -18,8 +19,10 @@ class PrismaPropertiesRepository implements PropertiesRepository {
   async searchProperties(filters: PropertySearchFilters): Promise<PropertySearchResult> {
     const query = filters.query?.trim() ?? "";
     const location = filters.location?.trim() ?? "";
+    const city = filters.city?.trim() ?? "";
     const hasQuery = query.length > 0;
     const hasLocation = location.length > 0;
+    const hasCity = city.length > 0;
     const sort = filters.sort ?? "relevance";
     const skip = (filters.page - 1) * filters.pageSize;
     const conditions: Prisma.Sql[] = [Prisma.sql`"status" = ${PropertyStatus.AVAILABLE}`];
@@ -36,6 +39,28 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       conditions.push(
         Prisma.sql`${normalizeSql(Prisma.sql`"location"`)} LIKE '%' || ${normalizeSql(Prisma.sql`${location}`)} || '%'`,
       );
+    }
+
+    if (hasCity) {
+      const resolvedCity = resolveActiveCityByInput(city);
+
+      if (!resolvedCity) {
+        conditions.push(Prisma.sql`1 = 0`);
+      } else {
+        const cityConditions = resolvedCity.aliases.map(
+          (alias) =>
+            Prisma.sql`${normalizeSql(Prisma.sql`COALESCE("city", '')`)} = ${normalizeSql(Prisma.sql`${alias}`)}`,
+        );
+
+        const locationConditions = resolvedCity.aliases.map(
+          (alias) =>
+            Prisma.sql`${normalizeSql(Prisma.sql`"location"`)} LIKE '%' || ${normalizeSql(Prisma.sql`${alias}`)} || '%'`,
+        );
+
+        conditions.push(
+          Prisma.sql`(${Prisma.join([...cityConditions, ...locationConditions], " OR ")})`,
+        );
+      }
     }
 
     if (filters.rooms !== undefined) {
@@ -139,6 +164,21 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       });
     }
 
+    if (query.city && query.city.trim().length > 0) {
+      const resolvedCity = resolveActiveCityByInput(query.city.trim());
+
+      if (!resolvedCity) {
+        filters.push({ id: { equals: "__no-results__" } });
+      } else {
+        const cityFilters: Prisma.PropertyWhereInput[] = resolvedCity.aliases.flatMap((alias) => [
+          { city: { equals: alias, mode: "insensitive" } },
+          { location: { contains: alias, mode: "insensitive" } },
+        ]);
+
+        filters.push({ OR: cityFilters });
+      }
+    }
+
     if (query.minPrice !== undefined && Number.isFinite(query.minPrice)) {
       filters.push({ price: { gte: query.minPrice } });
     }
@@ -238,13 +278,18 @@ class PrismaPropertiesRepository implements PropertiesRepository {
   }
 
   async createDirectProperty(data: CreatePropertyDTO, ownerId: string): Promise<{ id: string }> {
+    const composedLocation = [data.location.address, data.location.zone, data.location.city]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter((part) => part.length > 0)
+      .join(", ");
+
     const created = await prisma.property.create({
       data: {
         title: data.title,
         description: data.description ?? "",
-        location: data.location ?? data.city,
-        city: data.city,
-        neighborhood: data.neighborhood,
+        location: composedLocation,
+        city: data.location.city,
+        neighborhood: data.location.zone,
         price: data.price,
         rooms: data.rooms,
         type: data.type,
