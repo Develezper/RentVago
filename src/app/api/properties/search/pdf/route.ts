@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const authenticatedUser = await requireAuthenticatedUser(request);
-    requireRole(authenticatedUser, ["SUPERADMIN"], "No tienes permisos para descargar este reporte.");
+    requireRole(authenticatedUser, ["ADMIN"], "No tienes permisos para descargar este reporte.");
 
     const params = request.nextUrl.searchParams;
     const filters = parsePropertySearchQuery(params, { defaultPageSize: 50 });

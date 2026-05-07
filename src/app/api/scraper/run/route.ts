@@ -19,7 +19,7 @@ const runSchema = z
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
 
     let body: unknown = {};
     try {

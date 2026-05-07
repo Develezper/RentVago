@@ -1,10 +1,12 @@
 import { verifyAccessToken } from "@/lib/jwt";
 import type { Role } from "@/generated/prisma/enums";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 const ACCESS_COOKIE_NAME = "access_token";
 export const AUTH_USER_ID_HEADER = "x-user-id";
 export const AUTH_USER_ROLE_HEADER = "x-user-role";
+export const AUTH_INTERNAL_SIG_HEADER = "x-auth-sig";
 
 interface HeaderReader {
   get(name: string): string | null | undefined;
@@ -26,7 +28,51 @@ export class AuthorizationError extends Error {
 }
 
 const isRole = (value: string | null | undefined): value is Role => {
-  return value === "USER" || value === "SUPERADMIN";
+  return value === "ADMIN" || value === "EMPLOYEE";
+};
+
+const getAuthSignatureSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error("JWT_SECRET is required.");
+  }
+
+  if (secret.length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 characters long.");
+  }
+
+  return secret;
+};
+
+export const createAuthSignature = (userId: string, role: Role): string => {
+  return createHmac("sha256", getAuthSignatureSecret())
+    .update(`${userId}:${role}`)
+    .digest("hex");
+};
+
+const isValidAuthSignature = (
+  userId: string,
+  role: Role,
+  providedSignature: string | null | undefined,
+): boolean => {
+  if (!providedSignature) {
+    return false;
+  }
+
+  try {
+    const expectedSignature = createAuthSignature(userId, role);
+    const providedBuffer = Buffer.from(providedSignature, "utf8");
+    const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+
+    if (providedBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(providedBuffer, expectedBuffer);
+  } catch {
+    return false;
+  }
 };
 
 export const resolveAuthenticatedUserFromHeaders = (
@@ -34,8 +80,13 @@ export const resolveAuthenticatedUserFromHeaders = (
 ): AuthenticatedRequestUser | null => {
   const userId = requestHeaders.get(AUTH_USER_ID_HEADER);
   const roleValue = requestHeaders.get(AUTH_USER_ROLE_HEADER);
+  const signature = requestHeaders.get(AUTH_INTERNAL_SIG_HEADER);
 
   if (!userId || !isRole(roleValue)) {
+    return null;
+  }
+
+  if (!isValidAuthSignature(userId, roleValue, signature)) {
     return null;
   }
 

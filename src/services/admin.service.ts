@@ -13,21 +13,32 @@ export const adminService = {
   },
 
   async getDashboardMetrics() {
+    type UserGrowthByMonthRow = {
+      month_start: Date;
+      total_users: bigint;
+    };
+
     const [propertyTypes, userTrend, leaseStatus] = await Promise.all([
       prisma.property.groupBy({ by: ["type"], _count: true }),
-      prisma.user.findMany({ select: { createdAt: true }, orderBy: { createdAt: "asc" } }),
+      prisma.$queryRaw<UserGrowthByMonthRow[]>(Prisma.sql`
+        SELECT date_trunc('month', "createdAt") AS month_start,
+               COUNT(*)::bigint AS total_users
+        FROM "User"
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `),
       prisma.lease.groupBy({ by: ["status"], _count: true }),
     ]);
 
-    const userGroups: Record<string, number> = {};
-    userTrend.forEach((user) => {
-      const month = user.createdAt.toLocaleDateString("es-CO", { month: "short", year: "2-digit" });
-      userGroups[month] = (userGroups[month] ?? 0) + 1;
-    });
-
     return {
       propertyData: propertyTypes.map((p) => ({ name: p.type, value: p._count })),
-      userData: Object.entries(userGroups).map(([name, count]) => ({ name, usuarios: count })),
+      userData: userTrend.map((entry) => ({
+        name: entry.month_start.toLocaleDateString("es-CO", {
+          month: "short",
+          year: "2-digit",
+        }),
+        usuarios: Number(entry.total_users),
+      })),
       leaseData: leaseStatus.map((l) => ({ name: l.status, value: l._count })),
     };
   },

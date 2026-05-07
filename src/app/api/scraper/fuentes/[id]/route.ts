@@ -29,7 +29,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     const body: unknown = await request.json();
     const payload = fuenteUpdateSchema.parse(body);
@@ -59,7 +59,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     await prisma.scrapingFuente.delete({ where: { id } });
     return NextResponse.json({ data: { deleted: true } }, { status: 200 });

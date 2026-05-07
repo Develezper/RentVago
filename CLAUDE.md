@@ -1,7 +1,6 @@
-# RentVago — Reglas permanentes del proyecto
+# RentVago — Reglas Permanentes del Proyecto (Modo Agente)
 
 ## Comandos
-
 ```bash
 bun install          # instalar dependencias
 bun run dev          # servidor de desarrollo
@@ -10,103 +9,68 @@ bun run lint         # linting ESLint
 bun run db:generate  # generar cliente Prisma (bunx prisma generate)
 bun run db:migrate   # aplicar migraciones (bunx prisma migrate dev)
 bun run db:push      # push schema sin migraciones (dev rápido)
-bun run user:promote # promover rol de usuario (TARGET_EMAIL=x TARGET_ROLE=SUPERADMIN)
+bun run user:promote # promover rol de usuario (TARGET_EMAIL=x TARGET_ROLE=ADMIN)
 ```
 
-## Stack
+## Stack Tecnológico
+- **Framework:** Next.js 16 (App Router) + TypeScript estricto.
+- **Entorno:** Bun — package manager y runtime. NUNCA usar npm o yarn.
+- **Base de Datos:** Prisma ORM + PrismaPg adapter sobre Supabase (PostgreSQL).
+- **Estilos:** Tailwind CSS v4 (sin tailwind.config.ts, via @import).
+- **Métricas:** Recharts para el dashboard.
+- **Scraping:** Apify (`apify~facebook-marketplace-scraper`).
 
-- **Next.js 16** (App Router) + TypeScript estricto
-- **Bun** — package manager y runtime. NUNCA usar npm o yarn.
-- **Prisma ORM** + **PrismaPg adapter** sobre **Supabase (PostgreSQL)**
-- **Tailwind CSS v4** (sin tailwind.config.ts, via @import)
-- **Recharts** para métricas del dashboard
-- **Apify** (`apify~facebook-marketplace-scraper`) para scraping
-
-## Estructura de carpetas
-
-```
+## Estructura de Carpetas (Arquitectura Modular por Capas)
+Queda estrictamente prohibido usar Route Handlers masivos o acoplar base de datos en la UI.
+```text
 src/
-├── app/
+├── app/                  # Capa de Presentación (Rutas Next.js)
 │   ├── (auth)/           # login, register — públicos
-│   ├── (dashboard)/      # search, favorites — requiere auth (USER o SUPERADMIN)
-│   ├── admin/            # panel superadmin — requiere SUPERADMIN
+│   ├── (dashboard)/      # UI panel interno — requiere auth
 │   ├── catalog/          # catálogo público de propiedades
-│   └── api/              # route handlers
-│       ├── auth/
-│       ├── properties/
-│       ├── favorites/
-│       ├── search-filters/
-│       ├── admin/        # endpoints admin (solo SUPERADMIN)
-│       └── scraper/      # endpoints scraper (solo SUPERADMIN)
-├── components/
-│   ├── ui/               # componentes reutilizables (botones, cards, inputs)
-│   └── layout/           # Navbar, DashboardSidebar
-├── lib/                  # utilidades puras (jwt, auth, prisma client, validadores)
-├── services/             # lógica de dominio (auth, property, search, scraper...)
-├── generated/            # cliente Prisma auto-generado (NO editar manualmente)
-└── types/                # tipos TypeScript compartidos
+│   └── api/              # Route handlers (Solo actúan como Controladores, llaman a Casos de Uso)
+├── modules/              # Capa de Dominio e Infraestructura (Clean Architecture)
+│   ├── [nombre_modulo]/  # ej: properties, auth, users, scraping
+│   │   ├── domain/       # Entidades, Enums, Interfaces de repositorios (Sin Prisma)
+│   │   ├── application/  # Casos de uso (Lógica de negocio pura)
+│   │   └── infrastructure/# Repositorios (Prisma), adaptadores Apify
+├── components/           # Componentes UI (Diseño de kevin)
+├── lib/                  # Utilidades transversales (jwt, validadores)
+└── types/                # Tipos globales
 ```
 
-## Convenciones de naming (fuente: juanpablo)
-
-- Archivos: `kebab-case.ts` para lib/services, `PascalCase.tsx` para componentes
-- Servicios: `[dominio].service.ts`
-- Helpers de lib: `[nombre].ts`
-- Route handlers: `route.ts` dentro de cada carpeta de la API
-- Tipos compartidos: `[dominio].types.ts`
-
-## Reglas inmutables
-
-### Base de datos
-- Un solo `prisma/schema.prisma`. Nunca editar los archivos en `src/generated/`.
-- Mantener TODOS los índices de juanpablo en Property y SearchFilter.
-- Las imágenes de propiedades son `images String[]` — solo URLs públicas, nunca archivos locales.
-- NO crear seeds de datos. El equipo crea SUPERADMINs manualmente via `user:promote`.
-
-### Auth
-- JWT via `jose` + `bcryptjs`. NO usar `jsonwebtoken` ni `next-auth` ni Supabase Auth.
-- Cookies: `access_token` (15min) y `refresh_token` (7d), httpOnly + secure + sameSite=strict.
-- Rotación de tokens via `tokenVersion` en el modelo User (no tabla RefreshToken).
-- Secret: `JWT_SECRET` del .env, mínimo 32 caracteres.
-
-### Scraper
-- El scraper de Apify se dispara SOLO desde:
-  1. `POST /api/scraper/run` (endpoint protegido, solo SUPERADMIN)
-  2. Botón en `/admin/scraper` (panel admin)
-- NUNCA usar cron jobs ni auto-trigger.
-- Las URLs de imágenes de Facebook CDN se guardan tal cual en `images[]`. No descargar.
-
-### Diseño (fuente: kevin)
-- Tema oscuro: `bg-gray-950` fondo, `bg-black` cards, `green-500` acento.
-- Botón primario: `bg-green-500 text-black font-extrabold rounded-2xl hover:bg-green-400`.
-- Cards: `bg-black rounded-2xl border border-gray-800`.
-- Inputs: `bg-gray-900 border-gray-800 rounded-2xl focus:ring-green-500`.
-- Iconos: `lucide-react`.
-- NO mezclar dos sistemas visuales. Todo sigue el diseño de kevin.
-
-### TypeScript
-- `strict: true`. Prohibido usar `any` salvo código ya existente documentado como deuda técnica.
-- `allowJs: false`. Solo TypeScript.
-
-### Carpetas fuente (SOLO LECTURA)
-- `kevin/`, `juanjose/`, `juanpablo/`, `jorge/` son inmutables. Nunca escribir en ellas.
-
-## Roles
-
+## Reglas de Negocio: Roles
+El sistema opera EXCLUSIVAMENTE con dos roles. Prohibido usar "USER" o "SUPERADMIN".
 ```typescript
 enum Role {
-  USER       // usuario registrado estándar
-  SUPERADMIN // acceso total al panel admin
+  ADMIN      // Administrador general del sistema
+  EMPLOYEE   // Empleado con accesos limitados a gestión operativa
 }
 ```
 
-## Variables de entorno requeridas
+## Reglas Inmutables
 
-Ver `.env.example` para descripción completa.
+### Base de datos e Indexación
+- Un solo `prisma/schema.prisma`. 
+- Todo modelo que participe en búsquedas frecuentes debe tener índices compuestos o B-Tree (`@@index`).
+- Las imágenes de propiedades son `images String[]` — solo URLs públicas, nunca archivos locales.
 
-| Variable | Descripción |
-|----------|-------------|
-| `DATABASE_URL` | Supabase PostgreSQL (pooled, puerto 6543) |
-| `DIRECT_URL` | Supabase PostgreSQL (directo, puerto 5432, para migraciones) |
-| `JWT_SECRET` | Clave JWT, mínimo 32 caracteres |
-| `APIFY_TOKEN` | Token de API de Apify |
+### Autenticación y Seguridad
+- JWT via `jose` + `bcryptjs`. NO usar `jsonwebtoken`, `next-auth` ni Supabase Auth.
+- Cookies: `access_token` (15min) y `refresh_token` (7d), httpOnly + secure + sameSite=strict.
+- El proxy debe incluir protección Anti-Spoofing verificando la firma interna (`x-auth-sig`) en los headers.
+- Rotación de tokens via `tokenVersion` en el modelo User, aplicando patrón *Single-Flight* en concurrencia.
+
+### Scraper (Transición a Marketplace)
+- El scraper de Apify se dispara SOLO manualmente desde endpoints protegidos. NUNCA cron jobs.
+- La data raspada entra con estado `isScraped: true` para diferenciarla de las propiedades publicadas directamente por dueños legales.
+
+### Diseño Visual (Estilo Kevin)
+- Tema oscuro: `bg-gray-950` fondo, `bg-black` cards, `green-500` acento.
+- Botones: `bg-green-500 text-black font-extrabold rounded-2xl hover:bg-green-400`.
+- Cards/Inputs: Bordes `border-gray-800`, bordes redondeados `rounded-2xl`.
+- Iconos: `lucide-react`.
+
+### TypeScript y Código
+- `strict: true`. Prohibido usar `any`.
+- Los Route Handlers en `src/app/api` NO deben importar `prisma` directamente. Deben instanciar un Caso de Uso del directorio `src/modules`.

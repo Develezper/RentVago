@@ -40,7 +40,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     const lease = await leaseService.getLeaseById(id);
     if (!lease) return NextResponse.json({ error: "Arriendo no encontrado." }, { status: 404 });
@@ -68,7 +68,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     const body: unknown = await request.json();
     const payload = leaseUpdateSchema.parse(body);
@@ -110,7 +110,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     await leaseService.deleteLease(id);
     return NextResponse.json({ data: { deleted: true } }, { status: 200 });

@@ -10,8 +10,15 @@ datasource db {
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 enum Role {
-  USER
-  SUPERADMIN
+  ADMIN
+  EMPLOYEE
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  DRAFT
+  PENDING_REVIEW
 }
 
 enum PropertyType {
@@ -32,7 +39,7 @@ model User {
   email         String         @unique
   name          String?
   passwordHash  String
-  role          Role           @default(USER)
+  role          Role           @default(EMPLOYEE)
   tokenVersion  Int            @default(0) // Rotación de refresh tokens (sin tabla RefreshToken)
   isActive      Boolean        @default(true)
   properties    Property[]
@@ -61,10 +68,13 @@ model Property {
   images       String[]
   price        Decimal                  @db.Decimal(12, 2)
   location     String
+  city         String?
+  neighborhood String?
   rooms        Int?
   type         PropertyType             @default(CASA)
+  status       PropertyStatus           @default(AVAILABLE)
   sourceUrl    String?                  @unique
-  isScraped    Boolean                  @default(false)
+  isScraped    Boolean                  @default(true)
   ownerId      String?                  @db.Uuid
   owner        User?                    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   leases       Lease[]
@@ -78,6 +88,9 @@ model Property {
   @@index([rooms])
   @@index([price])
   @@index([location, rooms, price])
+  @@index([city, type, price])
+  @@index([neighborhood, city])
+  @@index([status, isScraped])
 }
 
 // NOTA Full-Text Search (PostgreSQL):

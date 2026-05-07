@@ -25,7 +25,7 @@ const propertyCreateSchema = z.object({
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const properties = await adminService.getAllProperties();
     const data = properties.map((p) => ({
       id: p.id,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = propertyCreateSchema.parse(body);
     const created = await prisma.property.create({

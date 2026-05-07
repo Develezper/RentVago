@@ -150,7 +150,7 @@ export const register = async (input: RegisterInput): Promise<AuthResult> => {
         email: payload.email,
         passwordHash,
         name: payload.name,
-        role: RoleEnum.USER,
+        role: RoleEnum.EMPLOYEE,
       },
       select: userAuthSelect,
     });

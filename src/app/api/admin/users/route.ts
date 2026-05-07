@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const users = await adminService.getAllUsers();
     const data = users.map((u) => ({
       ...u,

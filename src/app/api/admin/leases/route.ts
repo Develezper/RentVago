@@ -28,7 +28,7 @@ const leaseCreateSchema = z
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const leases = await leaseService.getAllLeases();
     const data = leases.map((l) => ({
       id: l.id,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = leaseCreateSchema.parse(body);
     const created = await leaseService.createLease({

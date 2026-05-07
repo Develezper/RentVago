@@ -4,7 +4,13 @@ import {
   REFRESH_COOKIE_NAME,
   setAuthCookies,
 } from "@/lib/auth-cookies";
-import { AUTH_USER_ID_HEADER, AUTH_USER_ROLE_HEADER } from "@/lib/api-auth";
+import {
+  AUTH_INTERNAL_SIG_HEADER,
+  AUTH_USER_ID_HEADER,
+  AUTH_USER_ROLE_HEADER,
+  createAuthSignature,
+} from "@/lib/api-auth";
+import type { Role } from "@/generated/prisma/enums";
 import { verifyAccessToken } from "@/lib/jwt";
 import { authService } from "@/services/auth.service";
 import { errors as joseErrors } from "jose";
@@ -18,9 +24,9 @@ const AUTH_API_PREFIXES = [
   "/api/properties/search",
 ] as const;
 
-// Routes that require SUPERADMIN role
-const SUPERADMIN_PAGE_PREFIXES = ["/admin"] as const;
-const SUPERADMIN_API_PREFIXES = ["/api/admin", "/api/scraper"] as const;
+// Routes that require ADMIN role
+const ADMIN_PAGE_PREFIXES = ["/admin"] as const;
+const ADMIN_API_PREFIXES = ["/api/admin", "/api/scraper"] as const;
 
 type RouteKind = "page" | "api";
 
@@ -29,14 +35,14 @@ const matchesPrefix = (pathname: string, prefixes: readonly string[]): boolean =
 
 type ProtectedRoute =
   | { kind: RouteKind; requiresRole: null }
-  | { kind: RouteKind; requiresRole: "SUPERADMIN" };
+  | { kind: RouteKind; requiresRole: "ADMIN" };
 
 const classifyRoute = (pathname: string): ProtectedRoute | null => {
-  if (matchesPrefix(pathname, SUPERADMIN_API_PREFIXES)) {
-    return { kind: "api", requiresRole: "SUPERADMIN" };
+  if (matchesPrefix(pathname, ADMIN_API_PREFIXES)) {
+    return { kind: "api", requiresRole: "ADMIN" };
   }
-  if (matchesPrefix(pathname, SUPERADMIN_PAGE_PREFIXES)) {
-    return { kind: "page", requiresRole: "SUPERADMIN" };
+  if (matchesPrefix(pathname, ADMIN_PAGE_PREFIXES)) {
+    return { kind: "page", requiresRole: "ADMIN" };
   }
   if (matchesPrefix(pathname, AUTH_API_PREFIXES)) {
     return { kind: "api", requiresRole: null };
@@ -83,15 +89,38 @@ const rejectRequest = (
 const withAuthHeaders = (
   request: NextRequest,
   userId: string,
-  role: string,
+  role: Role,
   tokens?: { accessToken: string; refreshToken: string },
 ): NextResponse => {
   const headers = new Headers(request.headers);
   headers.set(AUTH_USER_ID_HEADER, userId);
   headers.set(AUTH_USER_ROLE_HEADER, role);
+  headers.set(AUTH_INTERNAL_SIG_HEADER, createAuthSignature(userId, role));
   const response = NextResponse.next({ request: { headers } });
   if (tokens) setAuthCookies(response, tokens);
   return response;
+};
+
+const inFlightRefresh = new Map<
+  string,
+  Promise<Awaited<ReturnType<typeof authService.refresh>>>
+>();
+
+const getOrCreateRefreshPromise = (
+  refreshToken: string,
+): Promise<Awaited<ReturnType<typeof authService.refresh>>> => {
+  const currentPromise = inFlightRefresh.get(refreshToken);
+
+  if (currentPromise) {
+    return currentPromise;
+  }
+
+  const refreshPromise = authService
+    .refresh(refreshToken)
+    .finally(() => inFlightRefresh.delete(refreshToken));
+
+  inFlightRefresh.set(refreshToken, refreshPromise);
+  return refreshPromise;
 };
 
 const isJwtExpiredError = (error: unknown): boolean =>
@@ -109,9 +138,9 @@ const refreshSession = async (
   if (!refreshToken) return null;
 
   try {
-    const result = await authService.refresh(refreshToken);
+    const result = await getOrCreateRefreshPromise(refreshToken);
 
-    if (route.requiresRole === "SUPERADMIN" && result.user.role !== "SUPERADMIN") {
+    if (route.requiresRole === "ADMIN" && result.user.role !== "ADMIN") {
       return rejectRequest(request, route, 403, false);
     }
 
@@ -139,7 +168,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   try {
     const payload = await verifyAccessToken(accessToken);
 
-    if (route.requiresRole === "SUPERADMIN" && payload.role !== "SUPERADMIN") {
+    if (route.requiresRole === "ADMIN" && payload.role !== "ADMIN") {
       return rejectRequest(request, route, 403);
     }
 

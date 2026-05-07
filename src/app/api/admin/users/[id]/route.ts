@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 const userUpdateSchema = z
   .object({
-    role: z.enum(["USER", "SUPERADMIN"]).optional(),
+    role: z.enum(["EMPLOYEE", "ADMIN"]).optional(),
     isActive: z.boolean().optional(),
   })
   .strict()
@@ -27,7 +27,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const { id } = await params;
     const body: unknown = await request.json();
     const payload = userUpdateSchema.parse(body);

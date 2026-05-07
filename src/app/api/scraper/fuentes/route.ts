@@ -21,7 +21,7 @@ const fuenteCreateSchema = z
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const fuentes = await prisma.scrapingFuente.findMany({ orderBy: { creadoEn: "desc" } });
     const data = fuentes.map((f) => ({ ...f, creadoEn: f.creadoEn.toISOString() }));
     return NextResponse.json({ data }, { status: 200 });
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const body: unknown = await request.json();
     const payload = fuenteCreateSchema.parse(body);
     const created = await prisma.scrapingFuente.create({ data: payload });

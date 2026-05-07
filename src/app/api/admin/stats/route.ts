@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const user = await requireAuthenticatedUser(request);
-    requireRole(user, ["SUPERADMIN"]);
+    requireRole(user, ["ADMIN"]);
     const [stats, metrics] = await Promise.all([
       adminService.getStats(),
       adminService.getDashboardMetrics(),
