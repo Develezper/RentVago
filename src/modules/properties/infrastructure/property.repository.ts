@@ -16,6 +16,27 @@ import type {
 const normalizeSql = (value: Prisma.Sql): Prisma.Sql =>
   Prisma.sql`immutable_unaccent(lower(${value}))`;
 
+const toSerializablePrice = (value: unknown): number => {
+  if (typeof value === "number") return value;
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toString" in value &&
+    typeof value.toString === "function"
+  ) {
+    const parsed = Number(value.toString());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+};
+
 const buildPublicPropertyWhere = (
   query: Pick<PublicPropertyListQuery, "query" | "city" | "minPrice" | "maxPrice"> & {
     createdAfter?: Date;
@@ -177,7 +198,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         description: string;
         imageUrl: string;
         images: string[];
-        price: number | string;
+        price: unknown;
         location: string;
         rooms: number;
         isFeatured: boolean;
@@ -209,9 +230,13 @@ class PrismaPropertiesRepository implements PropertiesRepository {
 
     const rawCount = countResult[0]?.count;
     const total = rawCount === undefined ? 0 : Number(rawCount);
+    const serializedProperties = properties.map((property) => ({
+      ...property,
+      price: toSerializablePrice(property.price),
+    }));
 
     return {
-      data: properties,
+      data: serializedProperties,
       meta: {
         page: filters.page,
         pageSize: filters.pageSize,
@@ -266,7 +291,12 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       }),
     ]);
 
-    return { total, items };
+    const serializedItems = items.map((item) => ({
+      ...item,
+      price: toSerializablePrice(item.price),
+    }));
+
+    return { total, items: serializedItems };
   }
 
   async countPublicProperties(query: PublicPropertyCountQuery): Promise<number> {

@@ -34,7 +34,7 @@ export default async function CatalogPage({
 
   const catalogCards = properties.map((property) => ({
     ...property,
-    price: property.price.toString(),
+    price: Number(property.price),
   }));
 
   const prefilledSearchParams = new URLSearchParams();

@@ -16,7 +16,7 @@ interface RecommendedPropertyItem {
   title: string;
   description: string;
   images: string[];
-  price: { toString(): string };
+  price: number;
   location: string;
   rooms: number | null;
   type: string;

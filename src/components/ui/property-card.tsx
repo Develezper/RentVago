@@ -9,7 +9,7 @@ interface PropertyCardItem {
   title: string;
   description: string;
   images: string[];
-  price: { toString(): string };
+  price: number | string;
   location: string;
   rooms: number | null;
   type: string;
