@@ -228,7 +228,7 @@ export function SearchResultsToolbar({
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
-        {viewerRole === "SUPERADMIN" ? (
+        {viewerRole === "ADMIN" ? (
           <a
             href={pdfDownloadHref}
             className="inline-flex h-9 items-center rounded-lg border border-green-500/30 bg-green-500/10 px-3 text-sm font-medium text-green-400 transition hover:bg-green-500/20"

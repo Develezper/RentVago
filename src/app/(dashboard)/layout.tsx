@@ -2,8 +2,8 @@ import Link from "next/link";
 import { headers } from "next/headers";
 
 const roleLabelByValue: Record<string, string> = {
-  USER: "Usuario",
-  SUPERADMIN: "Super Admin",
+  EMPLOYEE: "Empleado",
+  ADMIN: "Admin",
 };
 
 export default async function DashboardLayout({
@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }>) {
   const requestHeaders = await headers();
-  const roleValue = requestHeaders.get("x-user-role") ?? "USER";
+  const roleValue = requestHeaders.get("x-user-role") ?? "EMPLOYEE";
   const roleLabel = roleLabelByValue[roleValue] ?? roleValue;
 
   return (
@@ -42,7 +42,7 @@ export default async function DashboardLayout({
             >
               Favoritos
             </Link>
-            {roleValue === "SUPERADMIN" ? (
+            {roleValue === "ADMIN" ? (
               <Link
                 href="/admin"
                 className="rounded-lg px-3 py-2 text-sm font-medium text-green-400 transition hover:bg-gray-800 hover:text-green-300"

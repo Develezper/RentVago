@@ -69,7 +69,7 @@ const getAuthenticatedViewer = async (): Promise<{
   const authenticatedUser = resolveAuthenticatedUserFromHeaders(requestHeaders);
 
   if (!authenticatedUser) {
-    return { userId: null, role: "USER" };
+    return { userId: null, role: "EMPLOYEE" };
   }
 
   return { userId: authenticatedUser.userId, role: authenticatedUser.role };

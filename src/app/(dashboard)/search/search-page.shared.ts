@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type SearchSort = "relevance" | "newest" | "priceAsc" | "priceDesc";
-export type ViewerRole = "USER" | "SUPERADMIN";
+export type ViewerRole = "EMPLOYEE" | "ADMIN";
 export type SearchPageSize = 6 | 12 | 24;
 
 export interface FilterState {
@@ -65,7 +65,7 @@ export const searchResponseSchema = z.object({
     total: z.number().int(),
     totalPages: z.number().int(),
   }),
-  viewerRole: z.enum(["USER", "SUPERADMIN"]),
+  viewerRole: z.enum(["EMPLOYEE", "ADMIN"]),
 });
 
 export const favoritesResponseSchema = z.object({
