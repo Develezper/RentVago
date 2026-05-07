@@ -33,8 +33,8 @@ const wait = async (ms: number): Promise<void> => {
 
 const runApifyScraper = async (fbUrl: string): Promise<{ saved: number; discarded: number }> => {
   const uploadPropertyImagesUseCase = new UploadPropertyImagesUseCase();
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN no está definido en .env");
+  const token = process.env.APIFY_API_TOKEN;
+  if (!token) throw new Error("APIFY_API_TOKEN no está definido en .env");
 
   const headers = {
     Authorization: `Bearer ${token}`,
