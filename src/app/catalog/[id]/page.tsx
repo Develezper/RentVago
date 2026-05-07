@@ -8,7 +8,7 @@ import { ACCESS_COOKIE_NAME } from "@/lib/auth-cookies";
 import { verifyAccessToken } from "@/lib/jwt";
 import { ContactOwnerButton } from "./contact-owner-button";
 
-const DEFAULT_WHATSAPP_NUMBER = "573001112233";
+const DEFAULT_WHATSAPP_NUMBER = "3000000000";
 
 const resolveAuthenticatedUserId = async (): Promise<string | null> => {
   const cookieStore = await cookies();
@@ -26,14 +26,24 @@ const resolveAuthenticatedUserId = async (): Promise<string | null> => {
   }
 };
 
-const resolveWhatsappNumber = (): string => {
-  const configuredValue =
-    process.env.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER ??
-    process.env.RENTVAGO_WHATSAPP_NUMBER ??
-    DEFAULT_WHATSAPP_NUMBER;
+const toDigitsOnly = (value: string | null | undefined): string => {
+  return (value ?? "").replace(/\D/g, "");
+};
 
-  const normalized = configuredValue.replace(/\D/g, "");
-  return normalized.length > 0 ? normalized : DEFAULT_WHATSAPP_NUMBER;
+const resolveWhatsappNumber = (ownerPhone: string | null | undefined): string => {
+  const configuredValue = toDigitsOnly(process.env.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER);
+
+  if (configuredValue.length > 0) {
+    return configuredValue;
+  }
+
+  const ownerPhoneValue = toDigitsOnly(ownerPhone);
+
+  if (ownerPhoneValue.length > 0) {
+    return ownerPhoneValue;
+  }
+
+  return DEFAULT_WHATSAPP_NUMBER;
 };
 
 export default async function CatalogPropertyPage({
@@ -51,7 +61,7 @@ export default async function CatalogPropertyPage({
   if (!property) notFound();
 
   const hasContactableOwner = property.owner?.id != null;
-  const whatsappNumber = resolveWhatsappNumber();
+  const whatsappNumber = resolveWhatsappNumber(property.owner?.phone);
 
   return (
     <main className="min-h-screen bg-gray-950 text-white">

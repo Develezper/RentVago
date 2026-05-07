@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -30,6 +33,8 @@ export function PropertyCard({
   className,
 }: PropertyCardProps) {
   const imageUrl = property.images[0] ?? "";
+  const [isImageLoading, setIsImageLoading] = useState(imageUrl.length > 0);
+  const [hasImageError, setHasImageError] = useState(false);
   const cardClasses =
     "group overflow-hidden rounded-2xl border border-gray-800 bg-black transition hover:border-green-500/40";
 
@@ -39,8 +44,26 @@ export function PropertyCard({
       className={className ? `${cardClasses} ${className}` : cardClasses}
     >
       <div className="relative h-44 bg-gray-900">
-        {imageUrl ? (
-          <Image src={imageUrl} alt={property.title} fill className="object-cover" unoptimized />
+        {imageUrl && !hasImageError ? (
+          <>
+            {isImageLoading ? (
+              <div className="absolute inset-0 animate-pulse bg-linear-to-r from-gray-800 via-gray-700 to-gray-800" />
+            ) : null}
+            <Image
+              src={imageUrl}
+              alt={property.title}
+              fill
+              className={`object-cover transition-opacity duration-300 ${
+                isImageLoading ? "opacity-0" : "opacity-100"
+              }`}
+              unoptimized
+              onLoad={() => setIsImageLoading(false)}
+              onError={() => {
+                setHasImageError(true);
+                setIsImageLoading(false);
+              }}
+            />
+          </>
         ) : (
           <div className="flex h-full items-center justify-center text-sm font-semibold text-gray-600">
             Sin imagen disponible

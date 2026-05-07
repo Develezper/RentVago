@@ -20,6 +20,8 @@ interface RecommendedPropertyItem {
   location: string;
   rooms: number | null;
   type: string;
+  isFeatured: boolean;
+  featuredUntil: Date | null;
 }
 
 interface GetRecommendedPropertiesResult {
@@ -38,6 +40,26 @@ const toNumberOrUndefined = (value: string | null): number | undefined => {
 const getStartOfToday = (): Date => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+const sortFeaturedFirst = (
+  items: RecommendedPropertyItem[],
+): RecommendedPropertyItem[] => {
+  const now = Date.now();
+
+  return [...items].sort((left, right) => {
+    const leftActive = left.isFeatured && (!left.featuredUntil || left.featuredUntil.getTime() >= now);
+    const rightActive =
+      right.isFeatured && (!right.featuredUntil || right.featuredUntil.getTime() >= now);
+
+    if (leftActive !== rightActive) {
+      return leftActive ? -1 : 1;
+    }
+
+    const leftUntil = left.featuredUntil?.getTime() ?? 0;
+    const rightUntil = right.featuredUntil?.getTime() ?? 0;
+    return rightUntil - leftUntil;
+  });
 };
 
 export class GetRecommendedPropertiesUseCase {
@@ -79,7 +101,7 @@ export class GetRecommendedPropertiesUseCase {
 
       if (recommended.items.length > 0) {
         return {
-          items: recommended.items,
+          items: sortFeaturedFirst(recommended.items),
           city: cityName,
           todayNewOffers,
           strategy: "personalized",
@@ -101,7 +123,7 @@ export class GetRecommendedPropertiesUseCase {
 
       if (recommended.items.length > 0) {
         return {
-          items: recommended.items,
+          items: sortFeaturedFirst(recommended.items),
           city: cityName,
           todayNewOffers,
           strategy: "city",
@@ -121,7 +143,7 @@ export class GetRecommendedPropertiesUseCase {
     });
 
     return {
-      items: fallback.items,
+      items: sortFeaturedFirst(fallback.items),
       city: getCityBySlug(DEFAULT_CITY_SLUG)?.name ?? "Medellin",
       todayNewOffers,
       strategy: "fallback",

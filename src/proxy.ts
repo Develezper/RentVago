@@ -17,12 +17,13 @@ import { errors as joseErrors } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 // Routes that require authentication (any role)
-const AUTH_PAGE_PREFIXES = ["/search", "/favorites", "/my-properties"] as const;
+const AUTH_PAGE_PREFIXES = ["/search", "/favorites", "/my-properties", "/checkout"] as const;
 const AUTH_API_PREFIXES = [
   "/api/favorites",
   "/api/search-filters",
   "/api/properties/search",
   "/api/properties/direct",
+  "/api/properties/feature",
 ] as const;
 
 // Routes that require ADMIN role

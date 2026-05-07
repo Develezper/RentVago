@@ -36,11 +36,17 @@ export function PropertyImageCarousel({
 }: PropertyImageCarouselProps) {
   const normalizedImages = useMemo(() => normalizeImages(images), [images]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isCurrentImageLoading, setIsCurrentImageLoading] = useState(normalizedImages.length > 0);
+  const [failedImages, setFailedImages] = useState<Record<string, true>>({});
 
   const hasImages = normalizedImages.length > 0;
+  const safeActiveIndex = hasImages ? activeIndex % normalizedImages.length : 0;
+  const activeImage = hasImages ? normalizedImages[safeActiveIndex] : null;
+  const activeImageFailed = activeImage ? failedImages[activeImage] === true : false;
 
   const previousImage = () => {
     if (!hasImages) return;
+    setIsCurrentImageLoading(true);
     setActiveIndex((previous) =>
       previous === 0 ? normalizedImages.length - 1 : previous - 1,
     );
@@ -48,6 +54,7 @@ export function PropertyImageCarousel({
 
   const nextImage = () => {
     if (!hasImages) return;
+    setIsCurrentImageLoading(true);
     setActiveIndex((previous) =>
       previous === normalizedImages.length - 1 ? 0 : previous + 1,
     );
@@ -58,25 +65,42 @@ export function PropertyImageCarousel({
       <div className={`relative overflow-hidden rounded-2xl bg-gray-900 ${heightClassName}`}>
         {hasImages ? (
           <>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={normalizedImages[activeIndex]}
-                initial={{ opacity: 0, scale: 1.03 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.99 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="absolute inset-0"
-              >
-                <Image
-                  src={normalizedImages[activeIndex]}
-                  alt={`${alt} - imagen ${activeIndex + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 70vw, 960px"
-                  priority={activeIndex === 0}
-                />
-              </motion.div>
-            </AnimatePresence>
+            {!activeImageFailed && activeImage ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeImage}
+                  initial={{ opacity: 0, scale: 1.03 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.99 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="absolute inset-0"
+                >
+                  {isCurrentImageLoading ? (
+                    <div className="absolute inset-0 animate-pulse bg-linear-to-r from-gray-800 via-gray-700 to-gray-800" />
+                  ) : null}
+                  <Image
+                    src={activeImage}
+                    alt={`${alt} - imagen ${safeActiveIndex + 1}`}
+                    fill
+                    className={`object-cover transition-opacity duration-300 ${
+                      isCurrentImageLoading ? "opacity-0" : "opacity-100"
+                    }`}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 70vw, 960px"
+                    priority={safeActiveIndex === 0}
+                    onLoad={() => setIsCurrentImageLoading(false)}
+                    onError={() => {
+                      if (!activeImage) return;
+                      setFailedImages((previous) => ({ ...previous, [activeImage]: true }));
+                      setIsCurrentImageLoading(false);
+                    }}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <div className="flex h-full items-center justify-center text-gray-600">
+                <ImageIcon className="h-10 w-10" />
+              </div>
+            )}
 
             {badgeLabel ? (
               <span className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1 text-xs font-semibold text-gray-200">
@@ -109,10 +133,13 @@ export function PropertyImageCarousel({
                     <button
                       type="button"
                       key={`dot-${index}`}
-                      onClick={() => setActiveIndex(index)}
+                      onClick={() => {
+                        setIsCurrentImageLoading(true);
+                        setActiveIndex(index);
+                      }}
                       aria-label={`Ir a imagen ${index + 1}`}
                       className={`h-2 w-2 rounded-full transition ${
-                        index === activeIndex ? "bg-green-400" : "bg-gray-500"
+                        index === safeActiveIndex ? "bg-green-400" : "bg-gray-500"
                       }`}
                     />
                   ))}
@@ -133,9 +160,12 @@ export function PropertyImageCarousel({
             <button
               type="button"
               key={`thumb-${image}-${index}`}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => {
+                setIsCurrentImageLoading(true);
+                setActiveIndex(index);
+              }}
               className={`relative h-16 overflow-hidden rounded-xl border transition ${
-                index === activeIndex
+                index === safeActiveIndex
                   ? "border-green-500"
                   : "border-gray-800 hover:border-gray-600"
               }`}

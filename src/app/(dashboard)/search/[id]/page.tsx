@@ -17,6 +17,22 @@ const currencyFormat = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 0,
 });
 
+const DEFAULT_WHATSAPP_NUMBER = "3000000000";
+
+const toDigitsOnly = (value: string | null | undefined): string => {
+  return (value ?? "").replace(/\D/g, "");
+};
+
+const resolveWhatsappNumber = (ownerPhone: string | null | undefined): string => {
+  const configured = toDigitsOnly(process.env.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER);
+  if (configured.length > 0) return configured;
+
+  const ownerValue = toDigitsOnly(ownerPhone);
+  if (ownerValue.length > 0) return ownerValue;
+
+  return DEFAULT_WHATSAPP_NUMBER;
+};
+
 const getAuthenticatedUserId = async (): Promise<string | null> => {
   const requestHeaders = await headers();
   return resolveAuthenticatedUserFromHeaders(requestHeaders)?.userId ?? null;
@@ -45,7 +61,8 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
   const whatsappText = encodeURIComponent(
     `Hola, me interesa la propiedad "${property.title}" (${property.location}).`,
   );
-  const whatsappUrl = `https://wa.me/573001112233?text=${whatsappText}`;
+  const whatsappNumber = resolveWhatsappNumber(property.owner?.phone);
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappText}`;
   const primaryImage = property.images[0] ?? "";
   const secondaryImage = property.images[1] ?? primaryImage;
   const tertiaryImage = property.images[2] ?? primaryImage;
