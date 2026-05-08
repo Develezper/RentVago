@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Heart, Home, Menu, Moon, Plus, Search, ShieldCheck, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 
 type DashboardHeaderProps = {
   roleLabel: string;
@@ -21,9 +22,25 @@ type ThemeMode = "dark" | "light";
 
 const themeStorageKey = "rentvago-theme";
 
+type RootViewTransition = {
+  ready: Promise<void>;
+  finished: Promise<void>;
+};
+
+type DocumentWithViewTransition = Document & {
+  startViewTransition?: (callback: () => void) => RootViewTransition;
+};
+
+type RootViewTransitionAnimationOptions = KeyframeAnimationOptions & {
+  pseudoElement: "::view-transition-new(root)";
+};
+
 const applyThemeMode = (theme: ThemeMode) => {
   document.documentElement.dataset.theme = theme;
 };
+
+const shouldReduceMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const navItems: NavItem[] = [
   { href: "/search", label: "Buscar", icon: <Search className="h-4 w-4" /> },
@@ -62,10 +79,39 @@ export function DashboardHeader({ roleLabel, roleValue }: DashboardHeaderProps) 
 
   const toggleTheme = () => {
     const nextTheme = themeMode === "dark" ? "light" : "dark";
+    const commitTheme = () => {
+      setThemeMode(nextTheme);
+      applyThemeMode(nextTheme);
+      window.localStorage.setItem(themeStorageKey, nextTheme);
+    };
+    const viewTransitionDocument = document as DocumentWithViewTransition;
 
-    setThemeMode(nextTheme);
-    applyThemeMode(nextTheme);
-    window.localStorage.setItem(themeStorageKey, nextTheme);
+    if (!viewTransitionDocument.startViewTransition || shouldReduceMotion()) {
+      commitTheme();
+      return;
+    }
+
+    document.documentElement.classList.add("theme-view-transitioning");
+
+    const transition = viewTransitionDocument.startViewTransition(() => {
+      flushSync(commitTheme);
+    });
+
+    void transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: ["inset(0 0 100% 0)", "inset(0)"],
+        },
+        {
+          duration: 600,
+          pseudoElement: "::view-transition-new(root)",
+        } satisfies RootViewTransitionAnimationOptions,
+      );
+    });
+
+    void transition.finished.finally(() => {
+      document.documentElement.classList.remove("theme-view-transitioning");
+    });
   };
 
   return (
