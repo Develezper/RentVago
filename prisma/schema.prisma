@@ -1,24 +1,80 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider   = "postgresql"
-  extensions = [vector]
+  provider = "postgresql"
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  DRAFT
+  PENDING_REVIEW
+}
+
+enum PropertyType {
+  CASA
+  APARTAMENTO
+}
+
+enum LeaseStatus {
+  ACTIVO
+  PENDIENTE
+  EXPIRADO
+}
+
+enum LeadStatus {
+  PENDING
+  CONTACTED
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
 model User {
-  id            Int            @id @default(autoincrement())
+  id            String         @id @default(uuid()) @db.Uuid
   email         String         @unique
   name          String?
+<<<<<<< HEAD
   properties    Property[]
+=======
+  phone         String?
+  passwordHash  String
+  role          Role           @default(EMPLOYEE)
+  tokenVersion  Int            @default(0) // Rotación de refresh tokens (sin tabla RefreshToken)
+  isActive      Boolean        @default(true)
+  properties    Property[]
+  leases        Lease[]
+  searchFilters SearchFilter[]
+  favorites     Favorite[]
+  leadsSent     Lead[]         @relation("LeadRequester")
+  leadsReceived Lead[]         @relation("LeadOwner")
+>>>>>>> feature/develezper-rentvago
   notifications Notification[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@index([role])
 }
 
+// ─── Property ────────────────────────────────────────────────────────────────
+// Unificación de: Property (juanpablo), Casa (juanjose), Arrendamiento (jorge).
+// - images String[]: URLs públicas solamente, nunca archivos locales.
+// - sourceUrl: URL de origen para deduplicación en scraping (urlFuente de jorge).
+// - isScraped: flag para distinguir propiedades manuales vs scrapeadas.
+// - ownerId nullable: propiedades scrapeadas no tienen dueño en el sistema.
+// - searchVector: columna tsvector gestionada por SQL (ver nota abajo).
+
 model Property {
+<<<<<<< HEAD
   id          Int      @id @default(autoincrement())
   title       String
   address     String
@@ -29,9 +85,57 @@ model Property {
   leases      Lease[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+=======
+  id           String                   @id @default(uuid()) @db.Uuid
+  title        String
+  description  String
+  images       String[]
+  price        Decimal                  @db.Decimal(12, 2)
+  location     String
+  city         String?
+  neighborhood String?
+  rooms        Int?
+  type         PropertyType             @default(CASA)
+  status       PropertyStatus           @default(AVAILABLE)
+  sourceUrl    String?                  @unique
+  isScraped    Boolean                  @default(true)
+  isFeatured   Boolean                  @default(false)
+  featuredUntil DateTime?
+  ownerId      String?                  @db.Uuid
+  owner        User?                    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  leases       Lease[]
+  favorites    Favorite[]
+  leads        Lead[]
+  searchVector Unsupported("tsvector")? @default(dbgenerated()) @map("search_vector")
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@index([ownerId])
+  @@index([location])
+  @@index([rooms])
+  @@index([price])
+  @@index([location, rooms, price])
+  @@index([city, type, price])
+  @@index([neighborhood, city])
+  @@index([status, isScraped])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([isScraped, createdAt])
+  @@index([isFeatured, featuredUntil])
+>>>>>>> feature/develezper-rentvago
 }
 
+// NOTA Full-Text Search (PostgreSQL):
+// La columna "search_vector" y su índice GIN se gestionan via SQL en las
+// migraciones, igual que en juanpablo/. Incluyen lower(unaccent(...))
+// para normalización y un índice trigram para búsqueda de location por
+// substring. El equipo debe habilitar las extensiones `unaccent` y
+// `pg_trgm` en Supabase antes de la primera migración.
+
+// ─── Lease ───────────────────────────────────────────────────────────────────
+
 model Lease {
+<<<<<<< HEAD
   id         Int       @id @default(autoincrement())
   startDate  DateTime
   endDate    DateTime
@@ -39,24 +143,48 @@ model Lease {
   property   Property  @relation(fields: [propertyId], references: [id])
   payments   Payment[]
   createdAt  DateTime  @default(now())
+=======
+  id          String      @id @default(uuid()) @db.Uuid
+  startDate   DateTime
+  endDate     DateTime
+  monthlyRent Decimal     @db.Decimal(10, 2)
+  status      LeaseStatus @default(PENDIENTE)
+  propertyId  String      @db.Uuid
+  property    Property    @relation(fields: [propertyId], references: [id])
+  tenantId    String      @db.Uuid
+  tenant      User        @relation(fields: [tenantId], references: [id])
+  payments    Payment[]
+  createdAt   DateTime    @default(now())
+
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([status])
+>>>>>>> feature/develezper-rentvago
 }
+
+// ─── Payment ─────────────────────────────────────────────────────────────────
 
 model Payment {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid()) @db.Uuid
   amount    Decimal  @db.Decimal(10, 2)
-  status    String   @default("pending") // pending, paid, overdue
-  leaseId   Int
+  status    String   @default("pending")
+  leaseId   String   @db.Uuid
   lease     Lease    @relation(fields: [leaseId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([leaseId])
 }
 
+// ─── Notification ────────────────────────────────────────────────────────────
+
 model Notification {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(uuid()) @db.Uuid
   message   String
   isRead    Boolean  @default(false)
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+<<<<<<< HEAD
 }
 
 model Embedding {
@@ -66,3 +194,80 @@ model Embedding {
 
   @@map("embeddings")
 }
+=======
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ─── SearchFilter ────────────────────────────────────────────────────────────
+
+model SearchFilter {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String?
+  minPrice  Decimal? @db.Decimal(12, 2)
+  maxPrice  Decimal? @db.Decimal(12, 2)
+  location  String?
+  rooms     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([location])
+  @@index([location, createdAt])
+}
+
+// ─── Favorite ────────────────────────────────────────────────────────────────
+
+model Favorite {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  propertyId String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+}
+
+// ─── Lead ────────────────────────────────────────────────────────────────────
+// Registro de cada intento de contacto entre inquilino y propietario.
+
+model Lead {
+  id         String     @id @default(uuid()) @db.Uuid
+  propertyId String     @db.Uuid
+  userId     String     @db.Uuid
+  ownerId    String     @db.Uuid
+  status     LeadStatus @default(PENDING)
+  property   Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User       @relation("LeadRequester", fields: [userId], references: [id], onDelete: Cascade)
+  owner      User       @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([propertyId])
+  @@index([userId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([propertyId, createdAt])
+}
+
+// ─── ScrapingFuente ──────────────────────────────────────────────────────────
+// Fuentes configuradas desde el panel admin. El scraper itera sobre las
+// fuentes activas. Para Facebook Marketplace usa el actor de Apify.
+
+model ScrapingFuente {
+  id       String   @id @default(uuid()) @db.Uuid
+  nombre   String
+  url      String   @unique
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+}
+>>>>>>> feature/develezper-rentvago

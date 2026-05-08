@@ -1,81 +1,55 @@
 # RentVago
 
-Base project with Next.js + TypeScript + Tailwind, ready to start development.
+Marketplace de arriendos con foco en publicación directa, moderación administrativa y búsqueda avanzada.
 
-## Package Manager
+Stack principal:
+- Next.js 16 (App Router)
+- TypeScript estricto
+- Prisma + PostgreSQL (Supabase)
+- Bun (runtime y package manager)
+- Tailwind CSS v4
 
-This repository uses Bun only.
+## Comandos
 
-- Install: bun install
-- Development: bun dev
-- Build: bun run build
-- Lint: bun run lint
+Instalación:
+- `bun install`
 
-Using npm, yarn, and pnpm is blocked by the preinstall check.
+Desarrollo y calidad:
+- `bun run dev`
+- `bun run build`
+- `bun run lint`
+- `bun run lint:fix`
 
-## Structure
+Base de datos:
+- `bun run db:generate`
+- `bun run db:migrate`
+- `bun run db:push`
+- `bun run db:seed`
+- `bun run db:reset`
 
-- src/app
-- src/components
-- src/lib
-- src/agents
-- src/workers
+Utilidades:
+- `bun run user:promote` (usa `TARGET_EMAIL` y `TARGET_ROLE=ADMIN|EMPLOYEE`)
 
-## Architecture
+## Arquitectura
 
-- Current architecture: technical layers (layered, folder-by-type)
-- Target architecture: Clean Architecture
-- Strategy: incremental migration per module/feature, without a big-bang rewrite
+La documentación técnica detallada está en:
+- [ARCHITECTURE.md](ARCHITECTURE.md)
 
-### Transition Rules
+Incluye:
+- Clean Architecture modular por capas (Domain, Application, Infrastructure)
+- Contratos y reglas de dependencia
+- Seguridad con HMAC anti-spoofing
+- Patrón Single-Flight para refresh de sesión en proxy
+- Estándares de manejo de errores HTTP
 
-- Domain must not depend on infrastructure
-- Use cases orchestrate domain and ports
-- Infrastructure implements ports, not business rules
-- Every new feature should move the codebase closer to the Clean target
+## Entorno
 
-## Environment Variables
-
-Use .env.example as the base to create your .env.local.
+Usa `.env` o `.env.local` con al menos:
+- `DATABASE_URL` y/o `DIRECT_URL`
+- `JWT_SECRET` (mínimo 32 caracteres)
+- `APIFY_API_TOKEN` (token de Apify para el scraper de Facebook Marketplace)
 
 ## Docker
 
-``` bash
-    docker compose up -d
-```
-
-``` bash
-    docker compose down
-``` 
-## Local AI Inference Engine
-
-This project uses [Ollama](https://ollama.com/) and the **Phi-3** model to run intelligent agents locally. This approach ensures data privacy and eliminates external API costs during development.
-
-### Prerequisites
-
-1. **Install Ollama:** Download and install it from [ollama.com](https://ollama.com/).
-2. **Download the Model:** Open your terminal and run the following command to get the lightweight Phi-3 model:
-   ```bash
-   ollama pull phi3
-
-## Prisma
-
-This command is used to generate the prisma client, push the schema to the database, seed the database and open the prisma studio.
-
-``` bash
-    bunx --bun prisma generate
-```
-
-``` bash
-    bunx --bun prisma db push
-```
-
-``` bash
-    bunx --bun prisma db seed
-```
-
-``` bash
-    bunx --bun prisma studio
-```
-
-> Use the flag *--bun* to run prisma commands.
+- `docker compose up -d`
+- `docker compose down`
