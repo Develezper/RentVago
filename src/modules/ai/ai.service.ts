@@ -191,6 +191,33 @@ class AIService {
     return `Parce, te recomiendo estas opciones que hacen buen match: ${suggestions}. Si quieres, te filtro más fino por barrio, habitaciones o presupuesto.`;
   }
 
+  private buildUnavailableAIReply(): string {
+    return "El asesor IA esta temporalmente no disponible por limite de uso del proveedor. Puedes intentar de nuevo en unos minutos; mientras tanto, revisa las propiedades sugeridas que te muestro abajo.";
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    return String(error);
+  }
+
+  private isQuotaOrRateLimitError(error: unknown): boolean {
+    const message = this.getErrorMessage(error).toLowerCase();
+
+    return (
+      message.includes("429") ||
+      message.includes("quota") ||
+      message.includes("rate limit") ||
+      message.includes("too many requests")
+    );
+  }
+
   private async searchByKeywordFallback(
     userQuery: string,
     limit: number,
@@ -424,9 +451,9 @@ class AIService {
 
   private async createAssistantReplyStream(
     messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
-  ): Promise<ReadableStream<Uint8Array> | null> {
+  ): Promise<{ stream: ReadableStream<Uint8Array> | null; error?: unknown }> {
     if (!this.client) {
-      return null;
+      return { stream: null };
     }
 
     try {
@@ -439,7 +466,8 @@ class AIService {
 
       const encoder = new TextEncoder();
 
-      return new ReadableStream<Uint8Array>({
+      return {
+        stream: new ReadableStream<Uint8Array>({
         async start(controller) {
           try {
             for await (const chunk of completionStream) {
@@ -455,13 +483,17 @@ class AIService {
             controller.error(error);
           }
         },
-      });
+        }),
+      };
     } catch (error: unknown) {
       logger.error("Failed to create streaming chat completion for assessor.", {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      return null;
+      return {
+        stream: null,
+        error,
+      };
     }
   }
 
@@ -564,11 +596,19 @@ class AIService {
         }
       }
 
-      const replyStream = await this.createAssistantReplyStream(messages);
+      const streamResult = await this.createAssistantReplyStream(messages);
+      const replyStream = streamResult.stream;
 
       if (replyStream) {
         return {
           replyStream,
+          contextProperties,
+        };
+      }
+
+      if (this.isQuotaOrRateLimitError(streamResult.error)) {
+        return {
+          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
           contextProperties,
         };
       }
@@ -583,6 +623,13 @@ class AIService {
       logger.error("Failed to generate streaming chat completion for assessor.", {
         error: error instanceof Error ? error.message : String(error),
       });
+
+      if (this.isQuotaOrRateLimitError(error)) {
+        return {
+          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
+          contextProperties,
+        };
+      }
 
       return {
         replyStream: this.createTextStreamFromString(this.buildFallbackChatReply(contextProperties)),
