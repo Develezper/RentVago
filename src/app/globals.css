@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
+  --background: #090d14;
   --foreground: #f3f4f6;
 }
 
@@ -9,4 +9,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+[class~="bg-gray-950"] {
+  background-color: #0b111a;
+}
+
+[class~="bg-gray-950/50"] {
+  background-color: rgb(11 17 26 / 0.5);
+}
+
+[class~="bg-black"] {
+  background-color: #070b12;
+}
+
+[class~="bg-black/95"] {
+  background-color: rgb(7 11 18 / 0.95);
+}
+
+[class~="bg-black/80"] {
+  background-color: rgb(7 11 18 / 0.8);
+}
+
+[class~="bg-black/75"] {
+  background-color: rgb(7 11 18 / 0.75);
+}
+
+[class~="bg-black/70"] {
+  background-color: rgb(7 11 18 / 0.7);
+}
+
+[class~="bg-black/60"] {
+  background-color: rgb(7 11 18 / 0.6);
+}
+
+[class~="bg-black/50"] {
+  background-color: rgb(7 11 18 / 0.5);
 }
