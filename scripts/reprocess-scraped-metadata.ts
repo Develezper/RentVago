@@ -28,6 +28,24 @@ const normalizeComparableText = (value: string): string => {
     .trim();
 };
 
+const isInvalidNeighborhood = (
+  neighborhood: string | null,
+  city: string | null,
+): boolean => {
+  const normalizedNeighborhood = normalizeComparableText(neighborhood ?? "");
+  const normalizedCity = normalizeComparableText(city ?? "");
+
+  if (normalizedNeighborhood.length === 0) {
+    return true;
+  }
+
+  if (normalizedCity.length > 0 && normalizedNeighborhood === normalizedCity) {
+    return true;
+  }
+
+  return false;
+};
+
 const getDatabaseUrl = (): string => {
   const directUrl = process.env.DIRECT_URL;
   const pooledUrl = process.env.DATABASE_URL;
@@ -138,9 +156,8 @@ async function main(): Promise<void> {
         cityUpdated += 1;
       }
 
-      const isNeighborhoodMissing =
-        property.neighborhood === null || property.neighborhood.trim().length === 0;
-      if (isNeighborhoodMissing && nextNeighborhood) {
+      const shouldReplaceNeighborhood = isInvalidNeighborhood(property.neighborhood, property.city);
+      if (shouldReplaceNeighborhood && nextNeighborhood) {
         data.neighborhood = nextNeighborhood;
         neighborhoodUpdated += 1;
       }
@@ -152,7 +169,10 @@ async function main(): Promise<void> {
       const isLocationCityOnly =
         cityForLocation !== undefined &&
         normalizeComparableText(currentLocation) === normalizeComparableText(cityForLocation);
-      const neighborhoodForLocation = data.neighborhood ?? property.neighborhood ?? nextNeighborhood;
+      const usableNeighborhood = isInvalidNeighborhood(property.neighborhood, cityForLocation ?? null)
+        ? null
+        : property.neighborhood;
+      const neighborhoodForLocation = data.neighborhood ?? usableNeighborhood ?? nextNeighborhood;
 
       if (neighborhoodForLocation && (isLocationMissing || isLocationCityOnly)) {
         data.location = cityForLocation

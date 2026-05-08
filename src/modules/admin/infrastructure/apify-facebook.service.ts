@@ -419,7 +419,8 @@ export const extractNeighborhoodFromTitle = (title: string): string | undefined 
     }
   }
 
-  const trailingEnPattern = /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
+  const trailingEnPattern =
+    /\ben\s+(?!.*\ben\s+)([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
   const trailingMatch = title.match(trailingEnPattern);
   if (!trailingMatch) {
     return undefined;

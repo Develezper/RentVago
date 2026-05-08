@@ -51,7 +51,8 @@ const extractNeighborhoodFromTitle = (title: string): string | null => {
     return candidate.length > 1 ? candidate : null;
   }
 
-  const trailingPattern = /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
+  const trailingPattern =
+    /\ben\s+(?!.*\ben\s+)([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
   const trailingMatch = title.match(trailingPattern);
   if (!trailingMatch?.[1]) {
     return null;
@@ -84,6 +85,28 @@ const extractNeighborhoodFromTitle = (title: string): string | null => {
   }
 
   return candidate;
+};
+
+const isNeighborhoodValid = (neighborhood: string, city: string): boolean => {
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  if (neighborhood.length === 0) {
+    return false;
+  }
+
+  const normalizedNeighborhood = normalize(neighborhood);
+  const normalizedCity = normalize(city);
+
+  if (normalizedCity.length > 0 && normalizedNeighborhood === normalizedCity) {
+    return false;
+  }
+
+  return true;
 };
 
 const extractBathroomsFromText = (text: string): number | null => {
@@ -134,10 +157,13 @@ const resolveDisplayLocation = (property: {
   city: string | null;
   neighborhood: string | null;
 }): string => {
-  const storedNeighborhood = (property.neighborhood ?? "").trim();
-  const titleNeighborhood = extractNeighborhoodFromTitle(property.title);
-  const neighborhood = storedNeighborhood.length > 0 ? storedNeighborhood : titleNeighborhood;
   const city = (property.city ?? "").trim();
+  const rawStoredNeighborhood = (property.neighborhood ?? "").trim();
+  const storedNeighborhood = isNeighborhoodValid(rawStoredNeighborhood, city)
+    ? rawStoredNeighborhood
+    : null;
+  const titleNeighborhood = extractNeighborhoodFromTitle(property.title);
+  const neighborhood = storedNeighborhood ?? titleNeighborhood;
 
   if (neighborhood && city.length > 0) {
     return `${neighborhood}, ${city}`;
