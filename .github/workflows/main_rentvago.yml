@@ -47,7 +47,7 @@ jobs:
         with:
           name: bun-app
           path: .
-          include-hidden-files: false
+          include-hidden-files: true
 
   deploy:
     runs-on: ubuntu-latest
