@@ -1,21 +1,4 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: rentvago-mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: rentvago_db
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   mongo:
     image: mongo:7
     container_name: rentvago-mongo
@@ -50,6 +33,5 @@ services:
       retries: 5
 
 volumes:
-  mysql_data:
   mongo_data:
   postgres_data:
