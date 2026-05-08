@@ -38,6 +38,118 @@ const getAuthenticatedUserId = async (): Promise<string | null> => {
   return resolveAuthenticatedUserFromHeaders(requestHeaders)?.userId ?? null;
 };
 
+const normalizeLocationPart = (value: string): string => {
+  return value.replace(/\s+/g, " ").replace(/^[,.:;\-]+|[,.:;\-]+$/g, "").trim();
+};
+
+const extractNeighborhoodFromTitle = (title: string): string | null => {
+  const explicitPattern =
+    /\b(?:barrio|sector|urbanizaci[oó]n)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})/i;
+  const explicitMatch = title.match(explicitPattern);
+  if (explicitMatch?.[1]) {
+    const candidate = normalizeLocationPart(explicitMatch[1].split(/[\n\r,;\.]/)[0] ?? "");
+    return candidate.length > 1 ? candidate : null;
+  }
+
+  const trailingPattern = /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
+  const trailingMatch = title.match(trailingPattern);
+  if (!trailingMatch?.[1]) {
+    return null;
+  }
+
+  const candidate = normalizeLocationPart(trailingMatch[1].split(/[\n\r,;\.]/)[0] ?? "");
+  if (candidate.length < 2) {
+    return null;
+  }
+
+  const invalidStarts = [
+    "arriendo",
+    "arrendando",
+    "venta",
+    "vendo",
+    "alquiler",
+    "apartamento",
+    "casa",
+    "habitacion",
+    "habitaciones",
+    "unidad",
+    "conjunto",
+  ];
+  const lowered = candidate
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (invalidStarts.some((token) => lowered === token || lowered.startsWith(`${token} `))) {
+    return null;
+  }
+
+  return candidate;
+};
+
+const extractBathroomsFromText = (text: string): number | null => {
+  const patterns = [
+    /\b(\d{1,2})\s*(?:ba(?:n|ñ)os?|wc|sanitarios?)\b/i,
+    /\b(?:ba(?:n|ñ)os?|wc|sanitarios?)\s*[:\-]?\s*(\d{1,2})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const parsed = Number.parseInt(match[1], 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const extractAreaFromText = (text: string): number | null => {
+  const patterns = [
+    /\b(\d{2,4})\s*(?:m2|m²|mt2|mts2|metros?\s*cuadrados?)\b/i,
+    /\b(?:area|metraje)\s*[:\-]?\s*(\d{2,4})\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const parsed = Number.parseInt(match[1], 10);
+    if (Number.isFinite(parsed) && parsed >= 10 && parsed <= 2000) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const resolveDisplayLocation = (property: {
+  title: string;
+  location: string;
+  city: string | null;
+  neighborhood: string | null;
+}): string => {
+  const storedNeighborhood = (property.neighborhood ?? "").trim();
+  const titleNeighborhood = extractNeighborhoodFromTitle(property.title);
+  const neighborhood = storedNeighborhood.length > 0 ? storedNeighborhood : titleNeighborhood;
+  const city = (property.city ?? "").trim();
+
+  if (neighborhood && city.length > 0) {
+    return `${neighborhood}, ${city}`;
+  }
+
+  if (neighborhood) {
+    return neighborhood;
+  }
+
+  return property.location;
+};
+
 export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
   const matchedCity = resolveActiveCityByInput(id);
@@ -56,10 +168,12 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
 
   const monthlyPrice = currencyFormat.format(Number(property.price));
   const rooms = property.rooms ?? 0;
-  const estimatedBathrooms = Math.max(1, Math.floor(rooms / 2) + 1);
-  const estimatedArea = rooms * 28 + 24;
+  const searchableText = `${property.title}\n${property.description}`;
+  const bathrooms = extractBathroomsFromText(searchableText);
+  const area = extractAreaFromText(searchableText);
+  const displayLocation = resolveDisplayLocation(property);
   const whatsappText = encodeURIComponent(
-    `Hola, me interesa la propiedad "${property.title}" (${property.location}).`,
+    `Hola, me interesa la propiedad "${property.title}" (${displayLocation}).`,
   );
   const ownerPhoneDigits = toDigitsOnly(property.owner?.phone);
   const shouldUseFacebookFallback =
@@ -93,7 +207,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
       <header className="rounded-3xl border border-gray-800 bg-black p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">{property.location}</p>
+            <p className="text-sm font-medium text-gray-500">{displayLocation}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
               {property.title}
             </h1>
@@ -144,15 +258,17 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             </div>
             <div className="rounded-2xl border border-gray-800 bg-black p-4 shadow-sm">
               <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Banos</p>
-              <p className="mt-1 text-xl font-semibold text-white">{estimatedBathrooms}</p>
+              <p className="mt-1 text-xl font-semibold text-white">{bathrooms ?? "N/D"}</p>
             </div>
             <div className="rounded-2xl border border-gray-800 bg-black p-4 shadow-sm">
               <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Area</p>
-              <p className="mt-1 text-xl font-semibold text-white">{estimatedArea} m²</p>
+              <p className="mt-1 text-xl font-semibold text-white">
+                {area !== null ? `${area} m²` : "N/D"}
+              </p>
             </div>
             <div className="rounded-2xl border border-gray-800 bg-black p-4 shadow-sm">
               <p className="text-xs uppercase tracking-[0.14em] text-gray-500">Ubicacion</p>
-              <p className="mt-1 text-base font-semibold text-white">{property.location}</p>
+              <p className="mt-1 text-base font-semibold text-white">{displayLocation}</p>
             </div>
           </div>
 

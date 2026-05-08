@@ -51,6 +51,7 @@ export interface PropertiesRepository {
     price: { toString(): string };
     location: string;
     city: string | null;
+    neighborhood: string | null;
     rooms: number | null;
     type: string;
     isScraped: boolean;

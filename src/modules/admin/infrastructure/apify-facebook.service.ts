@@ -352,6 +352,40 @@ const normalizeLocationSegment = (value: string): string => {
   return value.replace(/\s+/g, " ").replace(/^[,.:;\-]+|[,.:;\-]+$/g, "").trim();
 };
 
+const toNeighborhoodCandidate = (rawValue: string): string | undefined => {
+  const firstSegment = rawValue.split(/[,;\n\r\.]/)[0] ?? "";
+  const normalized = normalizeLocationSegment(firstSegment);
+
+  if (normalized.length < 2) {
+    return undefined;
+  }
+
+  if (resolveCanonicalCity(normalized)) {
+    return undefined;
+  }
+
+  const invalidStarts = [
+    "arriendo",
+    "arrendando",
+    "venta",
+    "vendo",
+    "alquiler",
+    "apartamento",
+    "casa",
+    "habitacion",
+    "habitaciones",
+    "unidad",
+    "conjunto",
+  ];
+  const normalizedStart = normalizeSearchText(normalized);
+
+  if (invalidStarts.some((token) => normalizedStart.startsWith(`${token} `) || normalizedStart === token)) {
+    return undefined;
+  }
+
+  return normalized;
+};
+
 export const extractNeighborhoodFromDescription = (description: string): string | undefined => {
   const patterns = [
     /\bbarrio\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,60})/i,
@@ -365,21 +399,33 @@ export const extractNeighborhoodFromDescription = (description: string): string 
       continue;
     }
 
-    const firstSegment = match[1].split(/[,;\n\r\.]/)[0] ?? "";
-    const normalized = normalizeLocationSegment(firstSegment);
-
-    if (normalized.length < 2) {
-      continue;
+    const candidate = toNeighborhoodCandidate(match[1]);
+    if (candidate) {
+      return candidate;
     }
-
-    if (resolveCanonicalCity(normalized)) {
-      continue;
-    }
-
-    return normalized;
   }
 
   return undefined;
+};
+
+export const extractNeighborhoodFromTitle = (title: string): string | undefined => {
+  const explicitPattern =
+    /\b(?:barrio|sector|urbanizaci[oó]n)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})/i;
+  const explicitMatch = title.match(explicitPattern);
+  if (explicitMatch) {
+    const explicitCandidate = toNeighborhoodCandidate(explicitMatch[1]);
+    if (explicitCandidate) {
+      return explicitCandidate;
+    }
+  }
+
+  const trailingEnPattern = /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
+  const trailingMatch = title.match(trailingEnPattern);
+  if (!trailingMatch) {
+    return undefined;
+  }
+
+  return toNeighborhoodCandidate(trailingMatch[1]);
 };
 
 const composeLocationLabel = (
@@ -502,10 +548,12 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
           "marketplaceListingLocation.name",
         ]) || cityMetadataRaw || normalizedCity;
       const cityFromDescription = resolveCanonicalCity(description);
+      const cityFromTitle = resolveCanonicalCity(title);
       const cityFromMetadata = resolveCanonicalCity(cityMetadataRaw);
       const cityFromSearch = resolveCanonicalCity(normalizedCity);
       const fallbackCity = cityMetadataRaw || normalizedCity;
-      const mappedCity = cityFromDescription ?? cityFromMetadata ?? cityFromSearch ?? fallbackCity;
+      const mappedCity =
+        cityFromDescription ?? cityFromTitle ?? cityFromMetadata ?? cityFromSearch ?? fallbackCity;
       const neighborhoodFromMetadata = getFirstNonEmptyString(item, [
         "location.reverse_geocode.neighborhood",
         "location.reverseGeocode.neighborhood",
@@ -516,8 +564,10 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         "location.reverseGeocode.borough",
       ]);
       const neighborhoodFromDescription = extractNeighborhoodFromDescription(description);
+      const neighborhoodFromTitle = extractNeighborhoodFromTitle(title);
       const mappedNeighborhood =
         neighborhoodFromDescription ??
+        neighborhoodFromTitle ??
         (neighborhoodFromMetadata ? normalizeLocationSegment(neighborhoodFromMetadata) : undefined);
       const roomsFromMetadata = getFirstPositiveInteger(item, [
         "bedrooms",
@@ -532,7 +582,8 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         "attributes.bedrooms",
         "features.bedrooms",
       ]);
-      const mappedRooms = roomsFromMetadata ?? extractRoomsFromDescription(description);
+      const mappedRooms =
+        roomsFromMetadata ?? extractRoomsFromDescription(description) ?? extractRoomsFromDescription(title);
       const mappedLocation = composeLocationLabel(
         normalizeLocationSegment(fallbackLocation),
         mappedCity,

@@ -2,13 +2,16 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import {
   extractNeighborhoodFromDescription,
+  extractNeighborhoodFromTitle,
   extractRoomsFromDescription,
   resolveCanonicalCity,
 } from "../src/modules/admin/infrastructure/apify-facebook.service";
 
 type ScrapedPropertyRow = {
   id: string;
+  title: string;
   description: string;
+  location: string;
   rooms: number | null;
   city: string | null;
   neighborhood: string | null;
@@ -16,6 +19,14 @@ type ScrapedPropertyRow = {
 };
 
 const BATCH_SIZE = 500;
+
+const normalizeComparableText = (value: string): string => {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+};
 
 const getDatabaseUrl = (): string => {
   const directUrl = process.env.DIRECT_URL;
@@ -47,7 +58,9 @@ async function fetchBatch(cursorId?: string): Promise<ScrapedPropertyRow[]> {
       : {}),
     select: {
       id: true,
+      title: true,
       description: true,
+      location: true,
       rooms: true,
       city: true,
       neighborhood: true,
@@ -78,6 +91,7 @@ async function main(): Promise<void> {
   let roomsUpdated = 0;
   let cityUpdated = 0;
   let neighborhoodUpdated = 0;
+  let locationUpdated = 0;
   let cursorId: string | undefined;
 
   while (true) {
@@ -89,20 +103,27 @@ async function main(): Promise<void> {
 
     for (const property of batch) {
       scanned += 1;
+      const title = (property.title ?? "").trim();
       const description = (property.description ?? "").trim();
 
-      if (description.length === 0) {
+      if (description.length === 0 && title.length === 0) {
         continue;
       }
 
-      const nextRooms = extractRoomsFromDescription(description);
-      const nextCity = resolveCanonicalCity(description);
-      const nextNeighborhood = extractNeighborhoodFromDescription(description);
+      const nextRooms =
+        extractRoomsFromDescription(description) ?? extractRoomsFromDescription(title);
+      const nextCity =
+        resolveCanonicalCity(description) ??
+        resolveCanonicalCity(title) ??
+        resolveCanonicalCity(property.location);
+      const nextNeighborhood =
+        extractNeighborhoodFromDescription(description) ?? extractNeighborhoodFromTitle(title);
 
       const data: {
         rooms?: number;
         city?: string;
         neighborhood?: string;
+        location?: string;
       } = {};
 
       const isRoomsMissing = property.rooms === null || property.rooms === 0;
@@ -122,6 +143,22 @@ async function main(): Promise<void> {
       if (isNeighborhoodMissing && nextNeighborhood) {
         data.neighborhood = nextNeighborhood;
         neighborhoodUpdated += 1;
+      }
+
+      const currentCity = property.city?.trim() ?? "";
+      const cityForLocation = data.city ?? (currentCity.length > 0 ? currentCity : nextCity);
+      const currentLocation = (property.location ?? "").trim();
+      const isLocationMissing = currentLocation.length === 0;
+      const isLocationCityOnly =
+        cityForLocation !== undefined &&
+        normalizeComparableText(currentLocation) === normalizeComparableText(cityForLocation);
+      const neighborhoodForLocation = data.neighborhood ?? property.neighborhood ?? nextNeighborhood;
+
+      if (neighborhoodForLocation && (isLocationMissing || isLocationCityOnly)) {
+        data.location = cityForLocation
+          ? `${neighborhoodForLocation}, ${cityForLocation}`
+          : neighborhoodForLocation;
+        locationUpdated += 1;
       }
 
       if (Object.keys(data).length === 0) {
@@ -153,6 +190,7 @@ async function main(): Promise<void> {
   console.info(`rooms actualizados: ${roomsUpdated}`);
   console.info(`city actualizados: ${cityUpdated}`);
   console.info(`neighborhood actualizados: ${neighborhoodUpdated}`);
+  console.info(`location actualizados: ${locationUpdated}`);
 }
 
 main()

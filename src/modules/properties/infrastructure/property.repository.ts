@@ -307,6 +307,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         price: true,
         location: true,
         city: true,
+        neighborhood: true,
         rooms: true,
         type: true,
         isScraped: true,
