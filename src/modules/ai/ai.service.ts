@@ -73,6 +73,11 @@ export interface ChatWithAssessorResult {
   contextProperties: SimilarProperty[];
 }
 
+export interface ChatWithAssessorStreamResult {
+  replyStream: ReadableStream<Uint8Array>;
+  contextProperties: SimilarProperty[];
+}
+
 const toPriceString = (price: PropertyEmbeddingPrice): string => {
   if (typeof price === "number") return Number.isFinite(price) ? String(price) : "0";
   if (typeof price === "string") return price;
@@ -406,12 +411,68 @@ class AIService {
     return properties.some((property) => property.similarity >= 0.8);
   }
 
-  async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
+  private createTextStreamFromString(text: string): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder();
+
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(text));
+        controller.close();
+      },
+    });
+  }
+
+  private async createAssistantReplyStream(
+    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  ): Promise<ReadableStream<Uint8Array> | null> {
+    if (!this.client) {
+      return null;
+    }
+
+    try {
+      const completionStream = await this.client.chat.completions.create({
+        model: CHAT_MODEL,
+        temperature: 0.35,
+        messages,
+        stream: true,
+      });
+
+      const encoder = new TextEncoder();
+
+      return new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            for await (const chunk of completionStream) {
+              const contentChunk = chunk.choices[0]?.delta?.content;
+
+              if (contentChunk) {
+                controller.enqueue(encoder.encode(contentChunk));
+              }
+            }
+
+            controller.close();
+          } catch (error: unknown) {
+            controller.error(error);
+          }
+        },
+      });
+    } catch (error: unknown) {
+      logger.error("Failed to create streaming chat completion for assessor.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return null;
+    }
+  }
+
+  async chatWithAssessorStream(userMessage: string): Promise<ChatWithAssessorStreamResult> {
     const normalizedMessage = userMessage.trim();
     if (normalizedMessage.length === 0) {
+      const reply =
+        "Comparte tu consulta y con gusto te ayudo a encontrar una propiedad ideal en el Valle de Aburra.";
+
       return {
-        reply:
-          "Comparte tu consulta y con gusto te ayudo a encontrar una propiedad ideal en el Valle de Aburra.",
+        replyStream: this.createTextStreamFromString(reply),
         contextProperties: [],
       };
     }
@@ -421,8 +482,11 @@ class AIService {
 
     if (!this.client) {
       this.warnMissingKeyOnce();
+
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(
+          this.buildFallbackChatReply(contextProperties),
+        ),
         contextProperties,
       };
     }
@@ -460,27 +524,20 @@ class AIService {
         });
 
         const assistantMessage = completion.choices[0]?.message;
-        if (!assistantMessage) break;
+        if (!assistantMessage) {
+          break;
+        }
+
+        const toolCalls = assistantMessage.tool_calls ?? [];
+        if (toolCalls.length === 0) {
+          break;
+        }
 
         messages.push({
           role: "assistant",
           content: assistantMessage.content ?? "",
           tool_calls: assistantMessage.tool_calls,
         });
-
-        const toolCalls = assistantMessage.tool_calls ?? [];
-        if (toolCalls.length === 0) {
-          const reply = assistantMessage.content?.trim();
-
-          if (reply) {
-            return {
-              reply,
-              contextProperties,
-            };
-          }
-
-          break;
-        }
 
         for (const toolCall of toolCalls) {
           if (toolCall.type !== "function") continue;
@@ -507,20 +564,65 @@ class AIService {
         }
       }
 
+      const replyStream = await this.createAssistantReplyStream(messages);
+
+      if (replyStream) {
+        return {
+          replyStream,
+          contextProperties,
+        };
+      }
+
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(
+          this.buildFallbackChatReply(contextProperties),
+        ),
         contextProperties,
       };
     } catch (error: unknown) {
-      logger.error("Failed to generate chat completion for assessor.", {
+      logger.error("Failed to generate streaming chat completion for assessor.", {
         error: error instanceof Error ? error.message : String(error),
       });
 
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(this.buildFallbackChatReply(contextProperties)),
         contextProperties,
       };
     }
+  }
+
+  async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
+    const { replyStream, contextProperties } = await this.chatWithAssessorStream(userMessage);
+    const reader = replyStream.getReader();
+    const decoder = new TextDecoder();
+    let reply = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        if (value) {
+          reply += decoder.decode(value, { stream: true });
+        }
+      }
+
+      reply += decoder.decode();
+    } catch (error: unknown) {
+      logger.error("Failed to read assessor stream response.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    const normalizedReply = reply.trim();
+
+    return {
+      reply: normalizedReply || this.buildFallbackChatReply(contextProperties),
+      contextProperties,
+    };
   }
 }
 

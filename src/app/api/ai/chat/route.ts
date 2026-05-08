@@ -8,14 +8,30 @@ const chatPayloadSchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
+const encodeContextPropertiesHeader = (contextProperties: unknown): string => {
+  try {
+    return encodeURIComponent(JSON.stringify(contextProperties));
+  } catch {
+    return encodeURIComponent("[]");
+  }
+};
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body: unknown = await request.json();
     const payload = chatPayloadSchema.parse(body);
 
-    const result = await aiService.chatWithAssessor(payload.message);
+    const result = await aiService.chatWithAssessorStream(payload.message);
 
-    return NextResponse.json({ data: result }, { status: 200 });
+    return new NextResponse(result.replyStream, {
+      status: 200,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-cache, no-transform",
+        "x-context-properties": encodeContextPropertiesHeader(result.contextProperties),
+      },
+    });
+
   } catch (error: unknown) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "El cuerpo JSON es invalido." }, { status: 400 });
