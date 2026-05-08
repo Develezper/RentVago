@@ -79,6 +79,7 @@ model Property {
   favorites     Favorite[]
   leads         Lead[]
   searchVector  Unsupported("tsvector")? @default(dbgenerated()) @map("search_vector")
+  embedding     Unsupported("vector(1536)")?
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
 

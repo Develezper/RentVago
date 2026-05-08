@@ -1,6 +1,7 @@
 import { LeaseStatus, PropertyStatus, PropertyType } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { aiService } from "@/modules/ai/ai.service";
 import type { AdminRepository } from "@/modules/admin/domain/admin.repository";
 import type {
   AdminBusinessStatsSnapshot,
@@ -334,7 +335,7 @@ class PrismaAdminRepository implements AdminRepository {
       ...(images.length > 0 ? { images } : {}),
     };
 
-    await prisma.property.upsert({
+    const persisted = await prisma.property.upsert({
       where: { sourceUrl: input.sourceUrl },
       update: updateData,
       create: {
@@ -351,6 +352,25 @@ class PrismaAdminRepository implements AdminRepository {
         type: PropertyType.APARTAMENTO,
         status: PropertyStatus.AVAILABLE,
       },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        city: true,
+        neighborhood: true,
+        rooms: true,
+      },
+    });
+
+    await aiService.generateAndPersistPropertyEmbedding({
+      id: persisted.id,
+      title: persisted.title,
+      description: persisted.description,
+      price: persisted.price,
+      city: persisted.city,
+      neighborhood: persisted.neighborhood,
+      rooms: persisted.rooms,
     });
   }
 }
