@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
+  --background: #020814;
   --foreground: #f3f4f6;
 }
 
@@ -15,11 +15,11 @@ body {
 }
 
 :root:not([data-theme="light"]) [class~="bg-gray-950"] {
-  background-color: #030712;
+  background-color: #020814;
 }
 
 :root:not([data-theme="light"]) [class~="bg-gray-950/50"] {
-  background-color: rgb(3 7 18 / 0.5);
+  background-color: rgb(2 8 20 / 0.5);
 }
 
 :root:not([data-theme="light"]) [class~="bg-black"] {
