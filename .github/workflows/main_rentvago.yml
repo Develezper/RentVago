@@ -34,6 +34,16 @@ jobs:
             echo "No build script found, skipping build"
           fi
 
+      - name: Prepare standalone package
+        run: |
+          rm -rf .deploy
+          mkdir -p .deploy/.next
+          cp -R .next/standalone/. .deploy/
+          cp -R .next/static .deploy/.next/static
+          if [ -d public ]; then
+            cp -R public .deploy/public
+          fi
+
       - name: Test app if present
         run: |
           if bun -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
@@ -45,9 +55,9 @@ jobs:
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: bun-app
-          path: .
-          include-hidden-files: false
+          name: standalone-app
+          path: .deploy
+          include-hidden-files: true
 
   deploy:
     runs-on: ubuntu-latest
@@ -60,7 +70,7 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: bun-app
+          name: standalone-app
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -68,6 +78,13 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F6100CEB3386471A88D19FA4A62C0916 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_985071827BE24AA7A0A8B0661C07F034 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FC46891283124987BD3EFF39313546FC }}
+
+      - name: Set startup command
+        run: |
+          az webapp config set \
+            --resource-group RenVago \
+            --name rentvago \
+            --startup-file "node server.js"
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp

@@ -14,7 +14,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await authUseCases.logout({ accessToken, refreshToken });
 
-  const loginUrl = new URL("/login", request.url);
+  const origin = request.headers.get("x-forwarded-proto") === "https"
+    ? `https://${request.headers.get("host")}`
+    : request.nextUrl.origin;
+  const loginUrl = new URL("/login", origin);
   const response = NextResponse.redirect(loginUrl, 303);
   clearAuthCookies(response);
 
