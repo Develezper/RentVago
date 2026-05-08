@@ -60,9 +60,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const themeScript = `
+    (() => {
+      try {
+        const theme = window.localStorage.getItem("rentvago-theme") === "light" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+      } catch {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  `;
+
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className="bg-gray-950 text-gray-100 min-h-screen">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
         <AppToaster />
       </body>

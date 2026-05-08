@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Heart, Home, Menu, Plus, Search, ShieldCheck, X } from "lucide-react";
-import { useState } from "react";
+import { Bell, Heart, Home, Menu, Moon, Plus, Search, ShieldCheck, Sun, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type DashboardHeaderProps = {
   roleLabel: string;
@@ -15,6 +15,14 @@ type NavItem = {
   label: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
+};
+
+type ThemeMode = "dark" | "light";
+
+const themeStorageKey = "rentvago-theme";
+
+const applyThemeMode = (theme: ThemeMode) => {
+  document.documentElement.dataset.theme = theme;
 };
 
 const navItems: NavItem[] = [
@@ -37,7 +45,28 @@ const isActivePath = (pathname: string, href: string) => {
 export function DashboardHeader({ roleLabel, roleValue }: DashboardHeaderProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || roleValue === "ADMIN");
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem(themeStorageKey);
+    const nextTheme = storedTheme === "light" ? "light" : "dark";
+    const frameId = window.requestAnimationFrame(() => {
+      setThemeMode(nextTheme);
+    });
+
+    applyThemeMode(nextTheme);
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = themeMode === "dark" ? "light" : "dark";
+
+    setThemeMode(nextTheme);
+    applyThemeMode(nextTheme);
+    window.localStorage.setItem(themeStorageKey, nextTheme);
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-800 bg-black/95 backdrop-blur">
@@ -86,6 +115,14 @@ export function DashboardHeader({ roleLabel, roleValue }: DashboardHeaderProps) 
               Salir
             </button>
           </form>
+          <button
+            type="button"
+            aria-label={themeMode === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-800 bg-gray-900 text-gray-200 transition hover:border-green-500/60 hover:text-green-400"
+            onClick={toggleTheme}
+          >
+            {themeMode === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
           <button
             type="button"
             aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
