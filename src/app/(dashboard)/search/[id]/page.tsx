@@ -43,17 +43,39 @@ const normalizeLocationPart = (value: string): string => {
 };
 
 const extractNeighborhoodFromTitle = (title: string): string | null => {
+  const normalizedTitle = title.trim();
+
   const explicitPattern =
     /\b(?:barrio|sector|urbanizaci[oó]n)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})/i;
-  const explicitMatch = title.match(explicitPattern);
+  const explicitMatch = normalizedTitle.match(explicitPattern);
   if (explicitMatch?.[1]) {
     const candidate = normalizeLocationPart(explicitMatch[1].split(/[\n\r,;\.]/)[0] ?? "");
     return candidate.length > 1 ? candidate : null;
   }
 
+  const enWithDelimiterPattern =
+    /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80}?)(?=\s+(?:\d{1,2}\s*(?:alcobas?|habitaciones?|ba(?:n|ñ)os?)|con\b|para\b|y\b|en\b|unidad\b|servicios?\b|$)|[.,;()])/i;
+  const enWithDelimiterMatch = normalizedTitle.match(enWithDelimiterPattern);
+  if (enWithDelimiterMatch?.[1]) {
+    const candidate = normalizeLocationPart(enWithDelimiterMatch[1].split(/[\n\r,;\.]/)[0] ?? "");
+    if (candidate.length > 1) {
+      return candidate;
+    }
+  }
+
+  const startsWithRentVerbPattern =
+    /^(?:se\s+arrienda|arriendo|arrienda|apto\s+arriendo|apartamento\s+en\s+arriendo|apartamento\s+arriendo)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{2,80})$/i;
+  const startsWithRentVerbMatch = normalizedTitle.match(startsWithRentVerbPattern);
+  if (startsWithRentVerbMatch?.[1]) {
+    const candidate = normalizeLocationPart(startsWithRentVerbMatch[1].split(/[\n\r,;\.]/)[0] ?? "");
+    if (candidate.length > 1) {
+      return candidate;
+    }
+  }
+
   const trailingPattern =
     /\ben\s+(?!.*\ben\s+)([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
-  const trailingMatch = title.match(trailingPattern);
+  const trailingMatch = normalizedTitle.match(trailingPattern);
   if (!trailingMatch?.[1]) {
     return null;
   }
@@ -103,6 +125,31 @@ const isNeighborhoodValid = (neighborhood: string, city: string): boolean => {
   const normalizedCity = normalize(city);
 
   if (normalizedCity.length > 0 && normalizedNeighborhood === normalizedCity) {
+    return false;
+  }
+
+  if (normalizedNeighborhood.length > 55) {
+    return false;
+  }
+
+  const invalidContains = [
+    "cuenta con",
+    "habitacion",
+    "habitaciones",
+    "alcoba",
+    "alcobas",
+    "bano",
+    "parqueadero",
+    "porteria",
+    "piscina",
+    "gimnasio",
+    "cocina",
+    "balcon",
+    "unidad completa",
+    "servicio",
+  ];
+
+  if (invalidContains.some((token) => normalizedNeighborhood.includes(token))) {
     return false;
   }
 

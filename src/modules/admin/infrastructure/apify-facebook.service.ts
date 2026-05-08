@@ -383,6 +383,36 @@ const toNeighborhoodCandidate = (rawValue: string): string | undefined => {
     return undefined;
   }
 
+  if (normalized.length > 55) {
+    return undefined;
+  }
+
+  const invalidContains = [
+    "cuenta con",
+    "habitacion",
+    "habitaciones",
+    "alcoba",
+    "alcobas",
+    "bano",
+    "bano",
+    "baño",
+    "baños",
+    "parqueadero",
+    "porteria",
+    "piscina",
+    "gimnasio",
+    "cocina",
+    "balcon",
+    "balcon",
+    "balcón",
+    "unidad completa",
+    "servicio",
+  ];
+
+  if (invalidContains.some((token) => normalizedStart.includes(token))) {
+    return undefined;
+  }
+
   return normalized;
 };
 
@@ -409,9 +439,11 @@ export const extractNeighborhoodFromDescription = (description: string): string 
 };
 
 export const extractNeighborhoodFromTitle = (title: string): string | undefined => {
+  const normalizedTitle = title.trim();
+
   const explicitPattern =
     /\b(?:barrio|sector|urbanizaci[oó]n)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})/i;
-  const explicitMatch = title.match(explicitPattern);
+  const explicitMatch = normalizedTitle.match(explicitPattern);
   if (explicitMatch) {
     const explicitCandidate = toNeighborhoodCandidate(explicitMatch[1]);
     if (explicitCandidate) {
@@ -419,9 +451,29 @@ export const extractNeighborhoodFromTitle = (title: string): string | undefined 
     }
   }
 
+  const enWithDelimiterPattern =
+    /\ben\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80}?)(?=\s+(?:\d{1,2}\s*(?:alcobas?|habitaciones?|ba(?:n|ñ)os?)|con\b|para\b|y\b|en\b|unidad\b|servicios?\b|$)|[.,;()])/i;
+  const enWithDelimiterMatch = normalizedTitle.match(enWithDelimiterPattern);
+  if (enWithDelimiterMatch) {
+    const delimitedCandidate = toNeighborhoodCandidate(enWithDelimiterMatch[1]);
+    if (delimitedCandidate) {
+      return delimitedCandidate;
+    }
+  }
+
+  const startsWithRentVerbPattern =
+    /^(?:se\s+arrienda|arriendo|arrienda|apto\s+arriendo|apartamento\s+en\s+arriendo|apartamento\s+arriendo)\s+([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{2,80})$/i;
+  const startsWithRentVerbMatch = normalizedTitle.match(startsWithRentVerbPattern);
+  if (startsWithRentVerbMatch) {
+    const rentVerbCandidate = toNeighborhoodCandidate(startsWithRentVerbMatch[1]);
+    if (rentVerbCandidate) {
+      return rentVerbCandidate;
+    }
+  }
+
   const trailingEnPattern =
     /\ben\s+(?!.*\ben\s+)([a-zA-ZÀ-ÿ0-9][a-zA-ZÀ-ÿ0-9\s\-]{1,80})$/i;
-  const trailingMatch = title.match(trailingEnPattern);
+  const trailingMatch = normalizedTitle.match(trailingEnPattern);
   if (!trailingMatch) {
     return undefined;
   }

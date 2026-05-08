@@ -43,7 +43,55 @@ const isInvalidNeighborhood = (
     return true;
   }
 
+  if (normalizedNeighborhood.length > 55) {
+    return true;
+  }
+
+  const invalidContains = [
+    "cuenta con",
+    "habitacion",
+    "habitaciones",
+    "alcoba",
+    "alcobas",
+    "bano",
+    "parqueadero",
+    "porteria",
+    "piscina",
+    "gimnasio",
+    "cocina",
+    "balcon",
+    "unidad completa",
+    "servicio",
+  ];
+
+  if (invalidContains.some((token) => normalizedNeighborhood.includes(token))) {
+    return true;
+  }
+
   return false;
+};
+
+const isSuspiciousLocation = (location: string): boolean => {
+  const normalizedLocation = normalizeComparableText(location);
+
+  const invalidContains = [
+    "cuenta con",
+    "habitacion",
+    "habitaciones",
+    "alcoba",
+    "alcobas",
+    "bano",
+    "parqueadero",
+    "porteria",
+    "piscina",
+    "gimnasio",
+    "cocina",
+    "balcon",
+    "unidad completa",
+    "servicio",
+  ];
+
+  return invalidContains.some((token) => normalizedLocation.includes(token));
 };
 
 const getDatabaseUrl = (): string => {
@@ -169,12 +217,13 @@ async function main(): Promise<void> {
       const isLocationCityOnly =
         cityForLocation !== undefined &&
         normalizeComparableText(currentLocation) === normalizeComparableText(cityForLocation);
+        const isLocationInvalid = isSuspiciousLocation(currentLocation);
       const usableNeighborhood = isInvalidNeighborhood(property.neighborhood, cityForLocation ?? null)
         ? null
         : property.neighborhood;
       const neighborhoodForLocation = data.neighborhood ?? usableNeighborhood ?? nextNeighborhood;
 
-      if (neighborhoodForLocation && (isLocationMissing || isLocationCityOnly)) {
+        if (neighborhoodForLocation && (isLocationMissing || isLocationCityOnly || isLocationInvalid)) {
         data.location = cityForLocation
           ? `${neighborhoodForLocation}, ${cityForLocation}`
           : neighborhoodForLocation;
