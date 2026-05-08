@@ -55,45 +55,50 @@ export default function AlertsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadAlerts = useCallback(async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    let isMounted = true;
 
-    try {
-      const response = await fetch("/api/search-filters", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
+    fetch("/api/search-filters", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const payload: unknown = await response.json();
+
+        if (!isMounted) return;
+
+        if (!response.ok) {
+          toast.error(extractApiError(payload, "No fue posible cargar tus alertas."));
+          setAlerts([]);
+          return;
+        }
+
+        if (
+          typeof payload === "object" &&
+          payload !== null &&
+          "data" in payload &&
+          Array.isArray(payload.data)
+        ) {
+          setAlerts(payload.data as AlertFilterItem[]);
+        } else {
+          setAlerts([]);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        toast.error("Error de red al cargar tus alertas.");
+        setAlerts([]);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoading(false);
       });
 
-      const payload: unknown = await response.json();
-
-      if (!response.ok) {
-        toast.error(extractApiError(payload, "No fue posible cargar tus alertas."));
-        setAlerts([]);
-        return;
-      }
-
-      if (
-        typeof payload === "object" &&
-        payload !== null &&
-        "data" in payload &&
-        Array.isArray(payload.data)
-      ) {
-        setAlerts(payload.data as AlertFilterItem[]);
-      } else {
-        setAlerts([]);
-      }
-    } catch {
-      toast.error("Error de red al cargar tus alertas.");
-      setAlerts([]);
-    } finally {
-      setIsLoading(false);
-    }
+    return () => {
+      isMounted = false;
+    };
   }, []);
-
-  useEffect(() => {
-    void loadAlerts();
-  }, [loadAlerts]);
 
   const deleteAlert = useCallback(async (id: string) => {
     if (deletingId) return;
