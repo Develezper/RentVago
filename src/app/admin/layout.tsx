@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Arriendos
           </AdminNavLink>
           <AdminNavLink href="/admin/alerts" icon={<BellRing className="w-5 h-5" />}>
-            Match alerts
+            Alertas match
           </AdminNavLink>
           <AdminNavLink href="/admin/users" icon={<Users className="w-5 h-5" />}>
             Usuarios
