@@ -190,6 +190,19 @@ model Lead {
   @@index([propertyId, createdAt])
 }
 
+model MatchAlert {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  phone     String
+  criteria  String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([phone])
+}
+
 model ScrapingFuente {
   id       String   @id @default(uuid()) @db.Uuid
   nombre   String

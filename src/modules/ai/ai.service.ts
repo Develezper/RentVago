@@ -6,6 +6,42 @@ type PropertyEmbeddingPrice = number | string | { toString(): string };
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const CHAT_MODEL = "gpt-4o-mini";
+const CREATE_MATCH_ALERT_TOOL_NAME = "create_match_alert";
+const MAX_TOOL_CALL_ROUNDS = 3;
+
+const MATCH_ALERT_TOOL = {
+  type: "function" as const,
+  function: {
+    name: CREATE_MATCH_ALERT_TOOL_NAME,
+    description:
+      "Crea una alerta de match cuando el usuario no encontro una propiedad exacta y comparte nombre, telefono/WhatsApp y criterio de busqueda.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Nombre del cliente.",
+        },
+        phone: {
+          type: "string",
+          description: "Numero de WhatsApp o telefono del cliente.",
+        },
+        criteria: {
+          type: "string",
+          description: "Criterio de lo que esta buscando el cliente.",
+        },
+      },
+      required: ["name", "phone", "criteria"],
+      additionalProperties: false,
+    },
+  },
+};
+
+interface MatchAlertToolArgs {
+  name: string;
+  phone: string;
+  criteria: string;
+}
 
 export interface Property {
   title: string;
@@ -299,6 +335,77 @@ class AIService {
     await this.savePropertyEmbedding(property.id, embedding);
   }
 
+  private parseMatchAlertToolArgs(rawArguments: string): MatchAlertToolArgs | null {
+    try {
+      const parsed: unknown = JSON.parse(rawArguments);
+      if (!parsed || typeof parsed !== "object") return null;
+
+      const candidate = parsed as Record<string, unknown>;
+      const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
+      const phone = typeof candidate.phone === "string" ? candidate.phone.trim() : "";
+      const criteria = typeof candidate.criteria === "string" ? candidate.criteria.trim() : "";
+
+      if (!name || !phone || !criteria) return null;
+
+      return {
+        name,
+        phone,
+        criteria,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async executeCreateMatchAlertTool(rawArguments: string): Promise<string> {
+    const args = this.parseMatchAlertToolArgs(rawArguments);
+
+    if (!args) {
+      return JSON.stringify({
+        ok: false,
+        error:
+          "Argumentos invalidos para create_match_alert. Se requiere name, phone y criteria como texto no vacio.",
+      });
+    }
+
+    try {
+      const created = await prisma.matchAlert.create({
+        data: {
+          name: args.name,
+          phone: args.phone,
+          criteria: args.criteria,
+        },
+      });
+
+      return JSON.stringify({
+        ok: true,
+        id: created.id,
+        status: created.status,
+        name: created.name,
+        phone: created.phone,
+        criteria: created.criteria,
+        createdAt: created.createdAt.toISOString(),
+      });
+    } catch (error: unknown) {
+      logger.error("Failed to create match alert from tool call.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return JSON.stringify({
+        ok: false,
+        error: "No fue posible guardar la alerta de match en este momento.",
+      });
+    }
+  }
+
+  private hasLikelyPhone(text: string): boolean {
+    return /(?:\+?\d[\d\s-]{6,}\d)/.test(text);
+  }
+
+  private hasExactContextMatch(properties: SimilarProperty[]): boolean {
+    return properties.some((property) => property.similarity >= 0.8);
+  }
+
   async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
     const normalizedMessage = userMessage.trim();
     if (normalizedMessage.length === 0) {
@@ -321,35 +428,87 @@ class AIService {
     }
 
     const systemPrompt =
-      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Usa el siguiente contexto de propiedades disponibles para responder al usuario. Se amable, conciso, usa jerga local muy sutil (parce, super) y si hay propiedades que hacen match, recomiendalas con entusiasmo. Si no hay propiedades exactas en el contexto, sugiere alternativas o invitalo a dejar una alerta. NUNCA inventes propiedades que no esten en el contexto.";
+      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Usa el siguiente contexto de propiedades disponibles para responder al usuario. Se amable, conciso, usa jerga local muy sutil (parce, super) y si hay propiedades que hacen match, recomiendalas con entusiasmo. NUNCA inventes propiedades que no esten en el contexto. Si el usuario busca algo que NO esta en el contexto de propiedades disponibles, dile que los buenos arriendos vuelan rapido, y ofrecelo crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE la herramienta create_match_alert para guardarlo en el sistema. Nunca uses la herramienta sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
 
     try {
-      const completion = await this.client.chat.completions.create({
-        model: CHAT_MODEL,
-        temperature: 0.35,
-        messages: [
-          {
-            role: "system",
-            content: `${systemPrompt}\n\nContexto de propiedades disponibles:\n${context}`,
-          },
-          {
-            role: "user",
-            content: normalizedMessage,
-          },
-        ],
-      });
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content: `${systemPrompt}\n\nContexto de propiedades disponibles:\n${context}`,
+        },
+        {
+          role: "user",
+          content: normalizedMessage,
+        },
+      ];
 
-      const reply = completion.choices[0]?.message?.content?.trim();
+      const noExactContextMatch = !this.hasExactContextMatch(contextProperties);
+      const shouldForceMatchAlertTool =
+        noExactContextMatch && this.hasLikelyPhone(normalizedMessage);
 
-      if (!reply) {
-        return {
-          reply: this.buildFallbackChatReply(contextProperties),
-          contextProperties,
-        };
+      const toolChoice = shouldForceMatchAlertTool
+        ? ({ type: "function", function: { name: CREATE_MATCH_ALERT_TOOL_NAME } } as const)
+        : ("auto" as const);
+
+      for (let round = 0; round < MAX_TOOL_CALL_ROUNDS; round += 1) {
+        const completion = await this.client.chat.completions.create({
+          model: CHAT_MODEL,
+          temperature: 0.35,
+          messages,
+          tools: [MATCH_ALERT_TOOL],
+          tool_choice: round === 0 ? toolChoice : "auto",
+        });
+
+        const assistantMessage = completion.choices[0]?.message;
+        if (!assistantMessage) break;
+
+        messages.push({
+          role: "assistant",
+          content: assistantMessage.content ?? "",
+          tool_calls: assistantMessage.tool_calls,
+        });
+
+        const toolCalls = assistantMessage.tool_calls ?? [];
+        if (toolCalls.length === 0) {
+          const reply = assistantMessage.content?.trim();
+
+          if (reply) {
+            return {
+              reply,
+              contextProperties,
+            };
+          }
+
+          break;
+        }
+
+        for (const toolCall of toolCalls) {
+          if (toolCall.type !== "function") continue;
+
+          if (toolCall.function.name !== CREATE_MATCH_ALERT_TOOL_NAME) {
+            messages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({
+                ok: false,
+                error: `La herramienta ${toolCall.function.name} no esta soportada.`,
+              }),
+            });
+            continue;
+          }
+
+          const toolResult = await this.executeCreateMatchAlertTool(toolCall.function.arguments);
+
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: toolResult,
+          });
+        }
       }
 
       return {
-        reply,
+        reply: this.buildFallbackChatReply(contextProperties),
         contextProperties,
       };
     } catch (error: unknown) {

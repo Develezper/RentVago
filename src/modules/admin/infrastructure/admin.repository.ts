@@ -6,6 +6,7 @@ import type { AdminRepository } from "@/modules/admin/domain/admin.repository";
 import type {
   AdminBusinessStatsSnapshot,
   AdminDashboardMetrics,
+  AdminMatchAlert,
   AdminStats,
   AdminUser,
   LeaseCreateInput,
@@ -229,6 +230,20 @@ class PrismaAdminRepository implements AdminRepository {
         name: true,
         role: true,
         isActive: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async getAllMatchAlerts(): Promise<AdminMatchAlert[]> {
+    return prisma.matchAlert.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        criteria: true,
+        status: true,
         createdAt: true,
       },
     });

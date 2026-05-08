@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { LayoutDashboard, Home, Users, Globe, ArrowLeft, FileText } from "lucide-react";
+import {
+  LayoutDashboard,
+  Home,
+  Users,
+  Globe,
+  ArrowLeft,
+  FileText,
+  BellRing,
+} from "lucide-react";
 import { AdminNavLink } from "./admin-nav-link";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +32,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </AdminNavLink>
           <AdminNavLink href="/admin/leases" icon={<FileText className="w-5 h-5" />}>
             Arriendos
+          </AdminNavLink>
+          <AdminNavLink href="/admin/alerts" icon={<BellRing className="w-5 h-5" />}>
+            Match alerts
           </AdminNavLink>
           <AdminNavLink href="/admin/users" icon={<Users className="w-5 h-5" />}>
             Usuarios
