@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { unstable_cache } from "next/cache";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, LogIn, Sparkles } from "lucide-react";
 import { PropertyCard } from "@/components/ui/property-card";
 import { WelcomeCityToast } from "@/components/ui/welcome-city-toast";
 import { ACCESS_COOKIE_NAME } from "@/lib/auth-cookies";
@@ -107,6 +107,13 @@ export default async function HomePage() {
             >
               Empezar gratis
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="/login"
+              className="group flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-8 py-4 text-lg font-bold text-green-300 shadow-[0_0_18px_rgba(34,197,94,0.12)] transition-all hover:border-green-400 hover:bg-green-500/20 hover:text-green-200 active:scale-95"
+            >
+              Iniciar sesion
+              <LogIn className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/catalog"
