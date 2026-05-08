@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { resolveCityByInput } from "@/modules/properties/domain/geography";
 
 type PropertyEmbeddingPrice = number | string | { toString(): string };
 
@@ -580,10 +581,25 @@ class AIService {
     };
 
     if (args.city) {
-      where.city = {
-        contains: args.city,
-        mode: "insensitive",
-      };
+      const resolvedCity = resolveCityByInput(args.city);
+
+      if (resolvedCity) {
+        const cityCandidates = Array.from(
+          new Set([args.city, resolvedCity.name, ...resolvedCity.aliases]),
+        );
+
+        where.OR = cityCandidates.map((candidate) => ({
+          city: {
+            contains: candidate,
+            mode: "insensitive",
+          },
+        }));
+      } else {
+        where.city = {
+          contains: args.city,
+          mode: "insensitive",
+        };
+      }
     }
 
     if (args.minPrice !== undefined || args.maxPrice !== undefined) {
