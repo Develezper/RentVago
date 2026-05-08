@@ -2,6 +2,8 @@ import Link from "next/link";
 import { LayoutDashboard, Home, Users, Globe, ArrowLeft, FileText } from "lucide-react";
 import { AdminNavLink } from "./admin-nav-link";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-950 overflow-hidden text-gray-100">

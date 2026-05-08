@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 const roleLabelByValue: Record<string, string> = {
   EMPLOYEE: "Empleado",
   ADMIN: "Admin",

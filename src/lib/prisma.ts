@@ -11,13 +11,29 @@ const getDatabaseUrl = (): string => {
   return databaseUrl;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
+const createPrismaClient = (): PrismaClient =>
   new PrismaClient({
     adapter: new PrismaPg({ connectionString: getDatabaseUrl() }),
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+const getPrismaClient = (): PrismaClient => {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+
+  return globalForPrisma.prisma;
+};
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property, receiver) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, property, receiver);
+
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
+
+if (process.env.NODE_ENV === "production") {
+  globalForPrisma.prisma = undefined;
 }
