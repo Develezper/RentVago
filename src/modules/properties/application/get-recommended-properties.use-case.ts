@@ -31,6 +31,10 @@ interface GetRecommendedPropertiesResult {
   strategy: "personalized" | "city" | "fallback";
 }
 
+type RepositoryRecommendedPropertyItem = Awaited<
+  ReturnType<PropertiesRepository["listPublicProperties"]>
+>["items"][number];
+
 const toNumberOrUndefined = (value: string | null): number | undefined => {
   if (!value) return undefined;
   const parsed = Number(value);
@@ -61,6 +65,14 @@ const sortFeaturedFirst = (
     return rightUntil - leftUntil;
   });
 };
+
+const normalizeRecommendedItems = (
+  items: RepositoryRecommendedPropertyItem[],
+): RecommendedPropertyItem[] =>
+  items.map((item) => ({
+    ...item,
+    price: Number(item.price.toString()),
+  }));
 
 export class GetRecommendedPropertiesUseCase {
   constructor(private readonly repository: PropertiesRepository) {}
@@ -101,7 +113,7 @@ export class GetRecommendedPropertiesUseCase {
 
       if (recommended.items.length > 0) {
         return {
-          items: sortFeaturedFirst(recommended.items),
+          items: sortFeaturedFirst(normalizeRecommendedItems(recommended.items)),
           city: cityName,
           todayNewOffers,
           strategy: "personalized",
@@ -123,7 +135,7 @@ export class GetRecommendedPropertiesUseCase {
 
       if (recommended.items.length > 0) {
         return {
-          items: sortFeaturedFirst(recommended.items),
+          items: sortFeaturedFirst(normalizeRecommendedItems(recommended.items)),
           city: cityName,
           todayNewOffers,
           strategy: "city",
@@ -143,7 +155,7 @@ export class GetRecommendedPropertiesUseCase {
     });
 
     return {
-      items: sortFeaturedFirst(fallback.items),
+      items: sortFeaturedFirst(normalizeRecommendedItems(fallback.items)),
       city: getCityBySlug(DEFAULT_CITY_SLUG)?.name ?? "Medellin",
       todayNewOffers,
       strategy: "fallback",
