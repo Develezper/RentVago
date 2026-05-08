@@ -3,6 +3,7 @@ import {
   clearAuthCookies,
   REFRESH_COOKIE_NAME,
 } from "@/lib/auth-cookies";
+import { createRequestUrl } from "@/lib/request-origin";
 import { authUseCases } from "@/modules/auth/application/auth.use-cases";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -14,10 +15,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await authUseCases.logout({ accessToken, refreshToken });
 
-  const origin = request.headers.get("x-forwarded-proto") === "https"
-    ? `https://${request.headers.get("host")}`
-    : request.nextUrl.origin;
-  const loginUrl = new URL("/login", origin);
+  const loginUrl = createRequestUrl(request, "/login");
   const response = NextResponse.redirect(loginUrl, 303);
   clearAuthCookies(response);
 

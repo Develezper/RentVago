@@ -12,6 +12,7 @@ import {
 } from "@/lib/api-auth";
 import type { Role } from "@/generated/prisma/enums";
 import { verifyAccessToken, verifyRefreshToken } from "@/lib/jwt";
+import { createRequestUrl } from "@/lib/request-origin";
 import { authUseCases } from "@/modules/auth/application/auth.use-cases";
 import { errors as joseErrors } from "jose";
 import { NextRequest, NextResponse } from "next/server";
@@ -56,7 +57,7 @@ const classifyRoute = (pathname: string): ProtectedRoute | null => {
 };
 
 const redirectToLogin = (request: NextRequest, clearSession = false): NextResponse => {
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = createRequestUrl(request, "/login");
   loginUrl.searchParams.set(
     "next",
     `${request.nextUrl.pathname}${request.nextUrl.search}`,
@@ -84,7 +85,7 @@ const rejectRequest = (
 ): NextResponse => {
   const message = status === 403 ? "Acceso denegado." : "No autorizado.";
   if (route.kind === "api") return unauthorizedApiResponse(message, status, clearSession);
-  if (status === 403) return NextResponse.redirect(new URL("/search", request.url));
+  if (status === 403) return NextResponse.redirect(createRequestUrl(request, "/search"));
   return redirectToLogin(request, clearSession);
 };
 
