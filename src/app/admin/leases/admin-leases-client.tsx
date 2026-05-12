@@ -89,9 +89,9 @@ export function AdminLeasesClient({ leases }: { leases: LeaseRow[] }) {
                 </tr>
               ) : (
                 leases.map((l) => (
-                  <tr key={l.id} className="hover:bg-gray-900/40 transition-colors group">
+                  <tr key={l.id} className="hover:bg-green-500/5 transition-colors group">
                     <td className="px-6 py-4 max-w-xs">
-                      <p className="font-semibold text-white line-clamp-1">{l.property.title}</p>
+                      <p className="font-semibold text-gray-200 line-clamp-1">{l.property.title}</p>
                       <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">
                         {l.property.location}
                       </p>
@@ -115,7 +115,7 @@ export function AdminLeasesClient({ leases }: { leases: LeaseRow[] }) {
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link
                           href={`/admin/leases/${l.id}/edit`}
-                          className="flex items-center gap-1.5 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white px-3 py-2 rounded-lg transition-all"
+                          className="flex items-center gap-1.5 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 px-3 py-2 rounded-lg transition-all"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Editar
@@ -123,7 +123,7 @@ export function AdminLeasesClient({ leases }: { leases: LeaseRow[] }) {
                         <button
                           onClick={() => handleDelete(l.id)}
                           disabled={deleting === l.id}
-                          className="flex items-center gap-1.5 text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-3 py-2 rounded-lg transition-all disabled:opacity-50"
+                          className="flex items-center gap-1.5 text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 px-3 py-2 rounded-lg transition-all disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           {deleting === l.id ? "..." : "Eliminar"}

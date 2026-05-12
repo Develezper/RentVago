@@ -1,8 +1,8 @@
 import type { ScrapedPropertyInput } from "@/modules/admin/domain/admin.types";
-
 const APIFY_FACEBOOK_SCRAPER_ENDPOINT =
   "https://api.apify.com/v2/acts/apify~facebook-marketplace-scraper/run-sync-get-dataset-items";
-const APIFY_RESULTS_LIMIT = 10;
+const DEFAULT_APIFY_RESULTS_LIMIT = 10;
+const MAX_APIFY_RESULTS_LIMIT = 50;
 const APIFY_REQUEST_TIMEOUT_MS = 90_000;
 
 interface ApifyFacebookItem {
@@ -509,11 +509,27 @@ const getApifyApiToken = (): string => {
   return token;
 };
 
-export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyInput[]> => {
+const normalizeScraperLimit = (count: number): number => {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error("El límite del scraper debe ser un entero positivo.");
+  }
+
+  return Math.min(count, MAX_APIFY_RESULTS_LIMIT);
+};
+
+export const runFacebookScraper = async (
+  city: string,
+  count = DEFAULT_APIFY_RESULTS_LIMIT,
+): Promise<ScrapedPropertyInput[]> => {
   const normalizedCity = city.trim();
+  const resultsLimit = normalizeScraperLimit(count);
   const encodedCity = encodeURIComponent(normalizedCity);
   const targetUrl = `https://web.facebook.com/marketplace/112307505452766/search/?query=arriendos%20${encodedCity}`;
   const apifyToken = getApifyApiToken();
+
+  console.info(
+    `[scraper] Ejecutando preview/sync de Facebook Marketplace para "${normalizedCity}" con límite ${resultsLimit}.`,
+  );
 
   const response = await fetch(
     `${APIFY_FACEBOOK_SCRAPER_ENDPOINT}?token=${encodeURIComponent(apifyToken)}`,
@@ -526,8 +542,8 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         includeListingDetails: true,
         getListingDetails: true,
         getAllListingPhotos: true,
-        resultsLimit: APIFY_RESULTS_LIMIT,
-        maxItems: APIFY_RESULTS_LIMIT,
+        resultsLimit,
+        maxItems: resultsLimit,
         startUrls: [{ url: targetUrl }],
       }),
       signal: AbortSignal.timeout(APIFY_REQUEST_TIMEOUT_MS),
@@ -674,5 +690,6 @@ export const runFacebookScraper = async (city: string): Promise<ScrapedPropertyI
         sourceUrl,
       } satisfies ScrapedPropertyInput;
     })
-    .filter((item) => item.title.length > 0 && item.sourceUrl.length > 0);
+    .filter((item) => item.title.length > 0 && item.sourceUrl.length > 0)
+    .slice(0, resultsLimit);
 };

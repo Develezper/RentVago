@@ -326,6 +326,7 @@ class PrismaAdminRepository implements AdminRepository {
       description: input.description,
       price: input.price,
       location: input.location,
+      isScraped: true,
       status: PropertyStatus.AVAILABLE,
       ...(input.city ? { city: input.city } : {}),
       ...(input.neighborhood ? { neighborhood: input.neighborhood } : {}),

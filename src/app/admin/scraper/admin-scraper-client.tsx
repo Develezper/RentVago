@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Trash2, Play, Plus, Globe, Loader2 } from "lucide-react";
+import { ScrapingPanel } from "./scraping-panel";
 
 interface Fuente {
   id: string;
@@ -223,6 +224,8 @@ export function AdminScraperClient({ initialFuentes }: { initialFuentes: Fuente[
           Gestión de fuentes y ejecución manual del scraper de Facebook Marketplace.
         </p>
       </header>
+
+      <ScrapingPanel fuentes={fuentes} onSaved={() => router.refresh()} />
 
       <div className="bg-black rounded-2xl border border-gray-800 p-8">
         <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2">
