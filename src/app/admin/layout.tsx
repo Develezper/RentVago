@@ -9,8 +9,10 @@ import {
   Globe, 
   ArrowLeft, 
   FileText, 
+  BellRing,
   Menu, 
   X 
+
 } from "lucide-react";
 import { AdminNavLink } from "./admin-nav-link";
 
@@ -61,6 +63,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </AdminNavLink>
           <AdminNavLink href="/admin/leases" icon={<FileText className="w-5 h-5" />}>
             Arriendos
+          </AdminNavLink>
+          <AdminNavLink href="/admin/alerts" icon={<BellRing className="w-5 h-5" />}>
+            Alertas match
           </AdminNavLink>
           <AdminNavLink href="/admin/users" icon={<Users className="w-5 h-5" />}>
             Usuarios

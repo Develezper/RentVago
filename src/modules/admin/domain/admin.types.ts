@@ -62,6 +62,15 @@ export interface AdminUser {
   createdAt: Date;
 }
 
+export interface AdminMatchAlert {
+  id: string;
+  name: string;
+  phone: string;
+  criteria: string;
+  status: string;
+  createdAt: Date;
+}
+
 export interface LeaseWithRelations {
   id: string;
   propertyId: string;

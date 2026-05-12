@@ -1,10 +1,12 @@
 import { LeaseStatus, PropertyStatus, PropertyType } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { aiService } from "@/modules/ai/ai.service";
 import type { AdminRepository } from "@/modules/admin/domain/admin.repository";
 import type {
   AdminBusinessStatsSnapshot,
   AdminDashboardMetrics,
+  AdminMatchAlert,
   AdminStats,
   AdminUser,
   LeaseCreateInput,
@@ -233,6 +235,20 @@ class PrismaAdminRepository implements AdminRepository {
     });
   }
 
+  async getAllMatchAlerts(): Promise<AdminMatchAlert[]> {
+    return prisma.matchAlert.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        criteria: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async updateUserRole(userId: string, role: Role): Promise<void> {
     await prisma.user.update({ where: { id: userId }, data: { role } });
   }
@@ -335,7 +351,7 @@ class PrismaAdminRepository implements AdminRepository {
       ...(images.length > 0 ? { images } : {}),
     };
 
-    await prisma.property.upsert({
+    const persisted = await prisma.property.upsert({
       where: { sourceUrl: input.sourceUrl },
       update: updateData,
       create: {
@@ -352,6 +368,25 @@ class PrismaAdminRepository implements AdminRepository {
         type: PropertyType.APARTAMENTO,
         status: PropertyStatus.AVAILABLE,
       },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        city: true,
+        neighborhood: true,
+        rooms: true,
+      },
+    });
+
+    await aiService.generateAndPersistPropertyEmbedding({
+      id: persisted.id,
+      title: persisted.title,
+      description: persisted.description,
+      price: persisted.price,
+      city: persisted.city,
+      neighborhood: persisted.neighborhood,
+      rooms: persisted.rooms,
     });
   }
 }
