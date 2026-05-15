@@ -6,6 +6,15 @@ export const runtime = "nodejs";
 
 const chatPayloadSchema = z.object({
   message: z.string().min(1).max(4000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().min(1).max(2000),
+      }),
+    )
+    .max(8)
+    .optional(),
 });
 
 const encodeContextPropertiesHeader = (contextProperties: unknown): string => {
@@ -21,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body: unknown = await request.json();
     const payload = chatPayloadSchema.parse(body);
 
-    const result = await aiService.chatWithAssessorStream(payload.message);
+    const result = await aiService.chatWithAssessorStream(payload.message, payload.history ?? []);
 
     return new NextResponse(result.replyStream, {
       status: 200,
