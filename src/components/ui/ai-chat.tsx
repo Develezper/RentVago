@@ -23,11 +23,7 @@ interface ChatMessage {
   contextProperties?: ContextProperty[];
 }
 
-interface ChatApiResponse {
-  data?: {
-    reply?: string;
-    contextProperties?: ContextProperty[];
-  };
+interface ChatApiErrorResponse {
   error?: string;
 }
 
@@ -57,6 +53,81 @@ const getMessageId = (): string => {
   }
 
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const parseContextPropertiesHeader = (rawHeaderValue: string | null): ContextProperty[] => {
+  if (!rawHeaderValue) {
+    return [];
+  }
+
+  try {
+    const decodedHeader = decodeURIComponent(rawHeaderValue);
+    const parsed = JSON.parse(decodedHeader) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const contextProperties: ContextProperty[] = [];
+
+    for (const property of parsed) {
+      if (!property || typeof property !== "object") {
+        continue;
+      }
+
+      const candidate = property as Record<string, unknown>;
+
+      if (
+        typeof candidate.id !== "string" ||
+        typeof candidate.title !== "string" ||
+        typeof candidate.price !== "string"
+      ) {
+        continue;
+      }
+
+      contextProperties.push({
+        id: candidate.id,
+        title: candidate.title,
+        price: candidate.price,
+        city: typeof candidate.city === "string" ? candidate.city : null,
+        neighborhood: typeof candidate.neighborhood === "string" ? candidate.neighborhood : null,
+        rooms: typeof candidate.rooms === "number" ? candidate.rooms : null,
+        propertyType: typeof candidate.propertyType === "string" ? candidate.propertyType : "N/D",
+      });
+    }
+
+    return contextProperties;
+  } catch {
+    return [];
+  }
+};
+
+const getErrorMessageFromResponse = async (response: Response): Promise<string> => {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = (await response.json()) as ChatApiErrorResponse;
+
+      if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+        return payload.error;
+      }
+    } catch {
+      return "No fue posible responder tu consulta ahora.";
+    }
+  }
+
+  try {
+    const bodyText = await response.text();
+
+    if (bodyText.trim().length > 0) {
+      return bodyText;
+    }
+  } catch {
+    return "No fue posible responder tu consulta ahora.";
+  }
+
+  return "No fue posible responder tu consulta ahora.";
 };
 
 export function AIChat() {
@@ -90,6 +161,8 @@ export function AIChat() {
     setInput("");
     setIsLoading(true);
 
+    let assistantMessageId: string | null = null;
+
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
@@ -99,32 +172,120 @@ export function AIChat() {
         body: JSON.stringify({ message: normalizedMessage }),
       });
 
-      const payload = (await response.json()) as ChatApiResponse;
-
       if (!response.ok) {
-        throw new Error(payload.error ?? "No fue posible responder tu consulta ahora.");
+        throw new Error(await getErrorMessageFromResponse(response));
       }
 
-      const assistantMessage: ChatMessage = {
-        id: getMessageId(),
-        role: "assistant",
-        content:
-          payload.data?.reply?.trim() ||
-          "No pude construir una respuesta clara en este momento, intenta de nuevo.",
-        contextProperties: Array.isArray(payload.data?.contextProperties)
-          ? payload.data.contextProperties
-          : [],
-      };
+      const createdAssistantMessageId = getMessageId();
+      assistantMessageId = createdAssistantMessageId;
 
-      setMessages((previous) => [...previous, assistantMessage]);
-    } catch {
+      const contextProperties = parseContextPropertiesHeader(
+        response.headers.get("x-context-properties"),
+      );
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: createdAssistantMessageId,
+          role: "assistant",
+          content: "",
+          contextProperties,
+        },
+      ]);
+
+      const responseBody = response.body;
+
+      if (!responseBody) {
+        throw new Error("No fue posible leer la respuesta en tiempo real.");
+      }
+
+      const reader = responseBody.getReader();
+      const decoder = new TextDecoder();
+      let streamedReply = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        if (!value) {
+          continue;
+        }
+
+        streamedReply += decoder.decode(value, { stream: true });
+
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.id === assistantMessageId
+              ? {
+                  ...message,
+                  content: streamedReply,
+                  contextProperties,
+                }
+              : message,
+          ),
+        );
+      }
+
+      streamedReply += decoder.decode();
+      const finalReply =
+        streamedReply.trim() ||
+        "No pude construir una respuesta clara en este momento, intenta de nuevo.";
+
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.id === assistantMessageId
+            ? {
+                ...message,
+                content: finalReply,
+                contextProperties,
+              }
+            : message,
+        ),
+      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Tuvimos un problema temporal conectando con el asesor. Intenta de nuevo en unos segundos.";
+
+      if (assistantMessageId) {
+        setMessages((previous) => {
+          const hasAssistantMessage = previous.some((message) => message.id === assistantMessageId);
+
+          if (!hasAssistantMessage) {
+            return [
+              ...previous,
+              {
+                id: getMessageId(),
+                role: "assistant",
+                content: errorMessage,
+              },
+            ];
+          }
+
+          return previous.map((message) =>
+            message.id === assistantMessageId
+              ? {
+                  ...message,
+                  content: errorMessage,
+                  contextProperties: [],
+                }
+              : message,
+          );
+        });
+
+        return;
+      }
+
       setMessages((previous) => [
         ...previous,
         {
           id: getMessageId(),
           role: "assistant",
-          content:
-            "Tuvimos un problema temporal conectando con el asesor. Intenta de nuevo en unos segundos.",
+          content: errorMessage,
         },
       ]);
     } finally {
@@ -135,7 +296,7 @@ export function AIChat() {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-50">
       {isOpen ? (
-        <section className="pointer-events-auto w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-3xl border border-green-500/30 bg-black/95 shadow-[0_25px_80px_rgba(34,197,94,0.22)] backdrop-blur md:w-[26rem]">
+        <section className="pointer-events-auto w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-3xl border border-green-500/30 bg-black/95 shadow-[0_25px_80px_rgba(34,197,94,0.22)] backdrop-blur md:w-104">
           <header className="relative border-b border-gray-800/90 bg-gray-950 px-4 py-3">
             <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-green-400/60 to-transparent" />
             <div className="flex items-start justify-between gap-3">
@@ -159,7 +320,7 @@ export function AIChat() {
             </div>
           </header>
 
-          <div className="max-h-[26rem] space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.10),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_40%)] px-3 py-4">
+          <div className="max-h-104 space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.10),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_40%)] px-3 py-4">
             {messages.map((message) => (
               <div
                 key={message.id}
