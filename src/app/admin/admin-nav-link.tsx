@@ -21,7 +21,7 @@ export function AdminNavLink({ href, icon, children, exact = false }: AdminNavLi
       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium group ${
         isActive
           ? "bg-green-500/10 text-green-400 border border-green-500/20"
-          : "text-gray-400 hover:bg-gray-900 hover:text-green-400 border border-transparent"
+          : "text-gray-400 hover:bg-green-500/5 hover:text-green-400 border border-transparent"
       }`}
     >
       <span className="group-hover:scale-110 transition-transform">{icon}</span>

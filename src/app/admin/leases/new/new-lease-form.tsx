@@ -68,7 +68,7 @@ export function NewLeaseForm({
     <div className="max-w-xl mx-auto">
       <Link
         href="/admin/leases"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors font-medium"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-green-400 mb-6 transition-colors font-medium"
       >
         <ArrowLeft className="w-4 h-4" />
         Volver

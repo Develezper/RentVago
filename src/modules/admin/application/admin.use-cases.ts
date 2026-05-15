@@ -21,6 +21,10 @@ const getAllUsers = () => {
   return adminRepository.getAllUsers();
 };
 
+const getAllMatchAlerts = () => {
+  return adminRepository.getAllMatchAlerts();
+};
+
 const updateUserRole = (userId: string, role: Role) => {
   return adminRepository.updateUserRole(userId, role);
 };
@@ -47,6 +51,7 @@ export const adminUseCases = {
   getDashboardMetrics,
   getBusinessStats,
   getAllUsers,
+  getAllMatchAlerts,
   updateUserRole,
   toggleUserStatus,
   upsertScrapedProperties,

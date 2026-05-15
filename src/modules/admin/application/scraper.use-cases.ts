@@ -1,143 +1,52 @@
-import axios from "axios";
-import { UploadPropertyImagesUseCase } from "@/modules/properties/application/upload-property-images.use-case";
-import { normalizePositivePriceToNumber } from "@/modules/properties/infrastructure/price-helper";
+import type { ScrapedPropertyInput } from "@/modules/admin/domain/admin.types";
 import { adminRepository } from "@/modules/admin/infrastructure/admin.repository";
+import { runFacebookScraper } from "@/modules/admin/infrastructure/apify-facebook.service";
 
-interface ApifyFBItem {
-  marketplace_listing_title?: string;
-  listingUrl?: string;
-  id?: string | number;
-  description?: string;
-  "primary_listing_photo.photo_image_url"?: string;
-  "listing_price.formatted_amount"?: string;
-  "listing_price.amount"?: string;
-}
-
-interface ScrapedProperty {
-  title: string;
-  description: string;
-  price: number;
-  location: string;
-  imageUrls: string[];
-  imageUrl: string | undefined;
-  sourceUrl: string;
-}
-
-const isValid = (item: ScrapedProperty): boolean => {
-  return item.title.length > 0 && item.price > 0 && item.sourceUrl.length > 0;
+const isValidScrapedProperty = (item: ScrapedPropertyInput): boolean => {
+  return item.title.trim().length > 0 && item.price > 0 && item.sourceUrl.trim().length > 0;
 };
 
-const wait = async (ms: number): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-};
-
-const runApifyScraper = async (fbUrl: string): Promise<{ saved: number; discarded: number }> => {
-  const uploadPropertyImagesUseCase = new UploadPropertyImagesUseCase();
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) throw new Error("APIFY_API_TOKEN no está definido en .env");
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-
-  const runRes = await axios.post(
-    "https://api.apify.com/v2/acts/apify~facebook-marketplace-scraper/runs",
-    {
-      startUrls: [{ url: fbUrl }],
-      urls: [fbUrl],
-      maxItems: 10,
-      maxPagesPerUrl: 10,
-      getListingDetails: false,
-      getAllListingPhotos: true,
-      strictFiltering: false,
-      proxy: { useApifyProxy: true },
-    },
-    { headers, timeout: 30000, params: { maxTotalChargeUsd: 1.0 } },
-  );
-
-  const runId: string = runRes.data?.data?.id;
-  const datasetId: string = runRes.data?.data?.defaultDatasetId;
-
-  if (!runId || !datasetId) {
-    throw new Error("La respuesta de Apify /runs no trajo id o defaultDatasetId");
-  }
-
-  for (let attempt = 1; attempt <= 15; attempt += 1) {
-    await wait(8000);
-
-    const statusRes = await axios.get(`https://api.apify.com/v2/actor-runs/${runId}`, {
-      headers,
-      timeout: 10000,
-    });
-
-    const status: string = statusRes.data?.data?.status;
-
-    if (status === "SUCCEEDED") break;
-
-    if (status === "FAILED" || status === "ABORTED" || status === "TIMED-OUT") {
-      throw new Error(`El actor de Apify finalizó con estado: ${status}`);
-    }
-
-    if (attempt === 15) throw new Error("Timeout: el actor tardó más de 2 minutos");
-  }
-
-  const dataRes = await axios.get(
-    `https://api.apify.com/v2/datasets/${datasetId}/items?format=json&clean=true&limit=10`,
-    { headers, timeout: 30000 },
-  );
-
-  const items: ApifyFBItem[] = Array.isArray(dataRes.data) ? dataRes.data : [];
+const saveScrapedProperties = async (
+  scrapedProperties: ScrapedPropertyInput[],
+): Promise<{ saved: number; discarded: number }> => {
   let saved = 0;
   let discarded = 0;
 
-  for (let i = 0; i < items.length; i += 1) {
-    const item = items[i];
-
-    if ((item as Record<string, unknown>).error) {
+  for (const property of scrapedProperties) {
+    if (!isValidScrapedProperty(property)) {
       discarded += 1;
       continue;
     }
 
-    const title = (item.marketplace_listing_title ?? "").trim();
-    const priceRaw =
-      item["listing_price.amount"] ?? item["listing_price.formatted_amount"] ?? "0";
-    const price = normalizePositivePriceToNumber(priceRaw) ?? 0;
-    const sourceUrl = item.listingUrl ?? `fb-marketplace-${item.id ?? i}`;
-    const imageUrl = item["primary_listing_photo.photo_image_url"] ?? undefined;
-    const imageUrls = await uploadPropertyImagesUseCase.execute({
-      images: imageUrl ? [imageUrl] : [],
-      source: "SCRAPING",
-    });
-
-    const scraped: ScrapedProperty = {
-      title,
-      description: item.description ?? "",
-      price: Number.isNaN(price) ? 0 : price,
-      location: "Facebook Marketplace",
-      imageUrls,
-      imageUrl,
-      sourceUrl,
-    };
-
-    if (!isValid(scraped)) {
-      discarded += 1;
-      continue;
-    }
-
-    await adminRepository.upsertScrapedProperty(scraped);
+    await adminRepository.upsertScrapedProperty(property);
     saved += 1;
   }
 
   return { saved, discarded };
 };
 
-const runScraping = async (url: string): Promise<{ saved: number; discarded: number }> => {
-  if (url.includes("facebook.com/marketplace")) {
-    return runApifyScraper(url);
-  }
+const previewFacebookScraping = (city: string, limit: number): Promise<ScrapedPropertyInput[]> => {
+  return runFacebookScraper(city, limit);
+};
 
-  throw new Error("Solo se soportan URLs de Facebook Marketplace por ahora.");
+const runFacebookScraping = async (
+  city: string,
+  limit: number,
+): Promise<{ fetched: number; saved: number; discarded: number; properties: ScrapedPropertyInput[] }> => {
+  const properties = await previewFacebookScraping(city, limit);
+  const { saved, discarded } = await saveScrapedProperties(properties);
+
+  return {
+    fetched: properties.length,
+    saved,
+    discarded,
+    properties,
+  };
+};
+
+const runScraping = async (city: string): Promise<{ saved: number; discarded: number }> => {
+  const { saved, discarded } = await runFacebookScraping(city, 10);
+  return { saved, discarded };
 };
 
 const runScrapingAllSources = async (): Promise<
@@ -184,6 +93,9 @@ const deleteScrapingSource = (id: string) => {
 
 export const scraperUseCases = {
   runScraping,
+  previewFacebookScraping,
+  runFacebookScraping,
+  saveScrapedProperties,
   runScrapingAllSources,
   listScrapingSources,
   createScrapingSource,

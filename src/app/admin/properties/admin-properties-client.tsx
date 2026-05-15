@@ -45,7 +45,7 @@ export function AdminPropertiesClient({ properties }: { properties: PropertyRow[
         <div className="flex items-center gap-3">
           <Link
             href="/admin/properties/pending"
-            className="flex items-center gap-2 border border-gray-800 bg-black text-gray-200 font-bold px-5 py-3 rounded-2xl hover:border-gray-700 hover:text-white transition-colors"
+            className="flex items-center gap-2 border border-gray-800 bg-black text-gray-200 font-bold px-5 py-3 rounded-2xl hover:border-gray-700 hover:bg-green-500/5 transition-colors"
           >
             Pendientes
           </Link>
@@ -93,14 +93,11 @@ export function AdminPropertiesClient({ properties }: { properties: PropertyRow[
                 </tr>
               ) : (
                 properties.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-900/40 transition-colors group">
-                    <td className="px-6 py-4 font-semibold text-white max-w-xs">
+                  <tr key={p.id} className="hover:bg-green-500/5 transition-colors group">
+                    <td className="px-6 py-4 font-semibold text-gray-200 max-w-xs">
                       <span className="line-clamp-1">{p.title}</span>
-                      {p.isScraped && (
-                        <span className="text-xs text-yellow-500 font-normal ml-1">(scrapeado)</span>
-                      )}
                     </td>
-                    <td className="px-6 py-4 text-gray-400 max-w-xs">
+                    <td className="px-6 py-4 text-gray-200 max-w-xs">
                       <span className="line-clamp-1">{p.location}</span>
                     </td>
                     <td className="px-6 py-4 text-green-400 font-bold">
@@ -120,7 +117,7 @@ export function AdminPropertiesClient({ properties }: { properties: PropertyRow[
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link
                           href={`/admin/properties/${p.id}/edit`}
-                          className="flex items-center gap-1.5 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white px-3 py-2 rounded-lg transition-all"
+                          className="flex items-center gap-1.5 text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 px-3 py-2 rounded-lg transition-all"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Editar
@@ -128,7 +125,7 @@ export function AdminPropertiesClient({ properties }: { properties: PropertyRow[
                         <button
                           onClick={() => handleDelete(p.id)}
                           disabled={deleting === p.id}
-                          className="flex items-center gap-1.5 text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-3 py-2 rounded-lg transition-all disabled:opacity-50"
+                          className="flex items-center gap-1.5 text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 hover:text-red-200 px-3 py-2 rounded-lg transition-all disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           {deleting === p.id ? "Eliminando..." : "Eliminar"}

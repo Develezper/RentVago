@@ -22,15 +22,30 @@
   --color-border-800: #1f2937;
   --color-border-700: #374151;
 
+  --color-text-600: #4b5563;
   --color-text-500: #6b7280;
   --color-text-400: #9ca3af;
+  --color-text-300: #d1d5db;
+  --color-text-200: #e5e7eb;
   --color-text-white: #ffffff;
+
+  --color-bg-700: #374151;
 
   --color-green-500: #22c55e;
   --color-green-400: #4ade80;
   --color-green-300: #86efac;
   --color-green-500-30: rgba(34, 197, 94, 0.3);
   --color-green-500-10: rgba(34, 197, 94, 0.1);
+
+  --color-metric-figure: #4ade80;
+  --color-surface-600: #4b5563;
+  --color-chart-grid: #1f2937;
+  --color-chart-axis: #9ca3af;
+  --color-chart-tooltip-bg: #111827;
+  --color-chart-tooltip-border: #1f2937;
+  --color-chart-tooltip-fg: #ffffff;
+  --color-chart-pie-tooltip-bg: #000000;
+  --color-chart-pie-tooltip-border: #333333;
 
   color-scheme: dark;
 }
@@ -56,15 +71,30 @@
   --color-border-800: #d8e3dc;
   --color-border-700: #c8d6ce;
 
+  --color-text-600: #4b5e50;
   --color-text-500: #6b7a70;
   --color-text-400: #526354;
+  --color-text-300: #3d5043;
+  --color-text-200: #2d3f33;
   --color-text-white: #142019;
+
+  --color-bg-700: #dce8e0;
 
   --color-green-500: #22c55e;
   --color-green-400: #15803d;
   --color-green-300: #15803d;
   --color-green-500-30: rgba(21, 128, 61, 0.28);
   --color-green-500-10: rgba(34, 197, 94, 0.12);
+
+  --color-metric-figure: #16a34a;
+  --color-surface-600: #94a3af;
+  --color-chart-grid: #dce8e0;
+  --color-chart-axis: #526354;
+  --color-chart-tooltip-bg: #ffffff;
+  --color-chart-tooltip-border: #d8e3dc;
+  --color-chart-tooltip-fg: #142019;
+  --color-chart-pie-tooltip-bg: #f7faf7;
+  --color-chart-pie-tooltip-border: #d8e3dc;
 
   color-scheme: light;
 }
@@ -101,14 +131,19 @@ body {
 [class~="bg-black/75"]    { background-color: var(--color-black-75) !important; }
 [class~="bg-black/70"]    { background-color: var(--color-black-70) !important; }
 [class~="bg-black/60"]    { background-color: var(--color-black-60) !important; }
-[class~="bg-black/50"]    { background-color: var(--color-black-50) !important; }
+[class~="bg-black/50"] {
+  background-color: color-mix(in srgb, var(--color-black) 50%, transparent) !important;
+}
 
 [class~="border-gray-800"] { border-color: var(--color-border-800) !important; }
 [class~="border-gray-700"] { border-color: var(--color-border-700) !important; }
 
 [class~="text-white"], [class~="text-gray-100"] { color: var(--color-text-white) !important; }
+[class~="text-gray-200"] { color: var(--color-text-200) !important; }
+[class~="text-gray-300"] { color: var(--color-text-300) !important; }
 [class~="text-gray-400"] { color: var(--color-text-400) !important; }
 [class~="text-gray-500"] { color: var(--color-text-500) !important; }
+[class~="text-gray-600"] { color: var(--color-text-600) !important; }
 
 [class~="text-green-500"] { color: var(--color-green-500) !important; }
 [class~="text-green-400"] { color: var(--color-green-400) !important; }
@@ -117,5 +152,63 @@ body {
 [class~="bg-green-500/10"] { background-color: var(--color-green-500-10) !important; }
 [class~="border-green-500/30"] { border-color: var(--color-green-500-30) !important; }
 
+[class~="bg-gray-700"]    { background-color: var(--color-bg-700) !important; }
+[class~="divide-gray-800"] > * + * { border-color: var(--color-border-800) !important; }
+
+[class~="bg-gray-900/50"] {
+  background-color: color-mix(in srgb, var(--color-bg-900) 50%, transparent) !important;
+}
+
+[class~="bg-gray-600"] { background-color: var(--color-surface-600) !important; }
+
+[class~="hover:bg-green-500/5"]:hover {
+  background-color: rgba(34, 197, 94, 0.05) !important;
+}
+[class~="hover:bg-green-500/8"]:hover {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
 :root[data-theme="light"] [class~="hover:bg-gray-800"]:hover { background-color: var(--color-bg-800) !important; }
+:root[data-theme="light"] [class~="hover:bg-gray-900"]:hover { background-color: var(--color-bg-900) !important; }
+:root[data-theme="light"] [class~="hover:bg-gray-700"]:hover { background-color: var(--color-bg-700) !important; }
 :root[data-theme="light"] [class~="hover:text-white"]:hover { color: var(--color-text-white) !important; }
+:root[data-theme="light"] [class~="hover:border-gray-700"]:hover { border-color: var(--color-border-700) !important; }
+:root[data-theme="light"] [class~="border-gray-900/70"] { border-color: var(--color-border-800) !important; }
+
+:root[data-theme="light"] [class~="hover:bg-gray-900/50"]:hover,
+:root[data-theme="light"] [class~="hover:bg-gray-900/40"]:hover,
+:root[data-theme="light"] [class~="hover:bg-gray-900/30"]:hover {
+  background-color: rgba(34, 197, 94, 0.06) !important;
+}
+
+:root[data-theme="light"] [class~="hover:bg-gray-500/10"]:hover {
+  background-color: rgba(34, 197, 94, 0.06) !important;
+}
+
+.admin-metric-card {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+:root[data-theme="light"] .admin-metric-card {
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+}
+
+:root[data-theme="light"] .admin-metric-card:hover {
+  box-shadow: 0 6px 20px -6px rgb(21 128 61 / 0.16);
+  background-color: rgba(34, 197, 94, 0.05) !important;
+}
+
+.admin-metric-value {
+  color: var(--color-metric-figure) !important;
+}
+
+.admin-chart-surface {
+  transition: box-shadow 180ms ease;
+}
+
+:root[data-theme="light"] .admin-chart-surface {
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+}

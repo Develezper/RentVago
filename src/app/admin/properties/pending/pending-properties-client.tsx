@@ -120,14 +120,14 @@ export function PendingPropertiesClient({ initialProperties }: PendingProperties
                 </tr>
               ) : (
                 items.map((property) => (
-                  <tr key={property.id} className="hover:bg-gray-900/30 transition-colors">
+                  <tr key={property.id} className="hover:bg-green-500/5 transition-colors">
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-white">{property.title}</p>
+                      <p className="font-semibold text-gray-200">{property.title}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {property.type} • {new Date(property.createdAt).toLocaleDateString("es-CO")}
                       </p>
                     </td>
-                    <td className="px-5 py-4 text-gray-400">
+                    <td className="px-5 py-4 text-gray-200">
                       {property.location}
                     </td>
                     <td className="px-5 py-4 text-green-400 font-bold">
@@ -155,7 +155,7 @@ export function PendingPropertiesClient({ initialProperties }: PendingProperties
 
       <Link
         href="/admin/properties"
-        className="inline-flex rounded-2xl border border-gray-800 bg-black px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:text-white hover:border-gray-700"
+        className="inline-flex rounded-2xl border border-gray-800 bg-black px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:text-gray-200 hover:border-gray-700 hover:bg-green-500/5"
       >
         Volver al listado general
       </Link>
