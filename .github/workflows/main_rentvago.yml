@@ -79,6 +79,30 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_985071827BE24AA7A0A8B0661C07F034 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FC46891283124987BD3EFF39313546FC }}
 
+      - name: Configure environment variables in Azure
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER: ${{ secrets.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER }}
+          NODE_ENV: production
+        run: |
+          az webapp config appsettings set \
+            --resource-group RenVago \
+            --name rentvago \
+            --settings \
+              DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              DIRECT_URL="${{ secrets.DIRECT_URL }}" \
+              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              APIFY_API_TOKEN="${{ secrets.APIFY_API_TOKEN }}" \
+              GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+              NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
+              NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER="${{ secrets.NEXT_PUBLIC_RENTVAGO_WHATSAPP_NUMBER }}" \
+              NODE_ENV="production"
+
       - name: Set startup command
         run: |
           az webapp config set \
