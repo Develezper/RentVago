@@ -15,6 +15,7 @@ const QUERY_PUBLIC_PROPERTIES_TOOL_NAME = "query_public_properties";
 const MAX_TOOL_CALL_ROUNDS = 3;
 const MAX_AI_SQL_LENGTH = 2000;
 const MAX_AI_SQL_ROWS = 50;
+const MIN_AI_PROPERTY_PRICE_COP = 100000;
 
 const MATCH_ALERT_TOOL = {
   type: "function" as const,
@@ -722,6 +723,9 @@ class AIService {
 
     const where: Prisma.PropertyWhereInput = {
       status: "AVAILABLE",
+      price: {
+        gte: MIN_AI_PROPERTY_PRICE_COP,
+      },
     };
 
     if (args.city) {
@@ -747,8 +751,10 @@ class AIService {
     }
 
     if (args.minPrice !== undefined || args.maxPrice !== undefined) {
+      const minPrice = Math.max(args.minPrice ?? MIN_AI_PROPERTY_PRICE_COP, MIN_AI_PROPERTY_PRICE_COP);
+
       where.price = {
-        ...(args.minPrice !== undefined ? { gte: args.minPrice } : {}),
+        gte: minPrice,
         ...(args.maxPrice !== undefined ? { lte: args.maxPrice } : {}),
       };
     }
@@ -843,6 +849,7 @@ class AIService {
           "createdAt" AS created_at
         FROM "Property"
         WHERE "status" = 'AVAILABLE'::"PropertyStatus"
+          AND "price" >= ${MIN_AI_PROPERTY_PRICE_COP}
       )
       SELECT *
       FROM (${validatedSql.sql}) AS ai_result
