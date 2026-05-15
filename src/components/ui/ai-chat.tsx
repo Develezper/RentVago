@@ -130,6 +130,19 @@ const getErrorMessageFromResponse = async (response: Response): Promise<string> 
   return "No fue posible responder tu consulta ahora.";
 };
 
+const buildChatHistoryPayload = (messages: ChatMessage[]): Array<{
+  role: MessageRole;
+  content: string;
+}> =>
+  messages
+    .filter((message) => message.id !== INITIAL_ASSISTANT_MESSAGE.id)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim(),
+    }))
+    .filter((message) => message.content.length > 0)
+    .slice(-8);
+
 export function AIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -156,6 +169,7 @@ export function AIChat() {
       role: "user",
       content: normalizedMessage,
     };
+    const history = buildChatHistoryPayload(messages);
 
     setMessages((previous) => [...previous, userMessage]);
     setInput("");
@@ -169,7 +183,7 @@ export function AIChat() {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: normalizedMessage }),
+        body: JSON.stringify({ message: normalizedMessage, history }),
       });
 
       if (!response.ok) {

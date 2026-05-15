@@ -88,7 +88,7 @@ const QUERY_PUBLIC_PROPERTIES_TOOL = {
         sql: {
           type: "string",
           description:
-            "Consulta SQL SELECT contra public_properties. Columnas: id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured, created_at. No uses tablas reales.",
+            "Consulta SQL SELECT contra public_properties. Columnas: id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured, created_at. No uses tablas reales. No filtres por type cuando el usuario diga casa, apartamento, apto, hogar o arriendo.",
         },
       },
       required: ["sql"],
@@ -153,6 +153,11 @@ export interface ChatWithAssessorResult {
 export interface ChatWithAssessorStreamResult {
   replyStream: ReadableStream<Uint8Array>;
   contextProperties: SimilarProperty[];
+}
+
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 const toPriceString = (price: PropertyEmbeddingPrice): string => {
@@ -261,7 +266,7 @@ class AIService {
 
   private buildFallbackChatReply(properties: SimilarProperty[]): string {
     if (properties.length === 0) {
-      return "Parce, por ahora no encontré propiedades que hagan match directo con tu búsqueda. Si quieres, te ayudo a ajustar presupuesto, zona o habitaciones, o te invito a dejar una alerta para avisarte apenas salga algo súper alineado.";
+      return "Por ahora no encontre propiedades que hagan match directo con tu busqueda. Si quieres, te ayudo a ajustar presupuesto, zona o habitaciones, o puedo crear una alerta para avisarte apenas salga algo alineado.";
     }
 
     const suggestions = properties
@@ -272,7 +277,7 @@ class AIService {
       )
       .join("; ");
 
-    return `Parce, te recomiendo estas opciones que hacen buen match: ${suggestions}. Si quieres, te filtro más fino por barrio, habitaciones o presupuesto.`;
+    return `Te recomiendo estas opciones que hacen buen match: ${suggestions}. Si quieres, te filtro mas fino por barrio, habitaciones o presupuesto.`;
   }
 
   private buildUnavailableAIReply(): string {
@@ -940,8 +945,35 @@ class AIService {
     }
   }
 
-  async chatWithAssessorStream(userMessage: string): Promise<ChatWithAssessorStreamResult> {
+  private normalizeChatHistory(history: ChatHistoryMessage[]): ChatHistoryMessage[] {
+    return history
+      .map((message) => ({
+        role: message.role,
+        content: message.content.trim(),
+      }))
+      .filter((message) => message.content.length > 0)
+      .slice(-8);
+  }
+
+  private buildContextualSearchQuery(
+    userMessage: string,
+    history: ChatHistoryMessage[],
+  ): string {
+    const recentUserMessages = history
+      .filter((message) => message.role === "user")
+      .map((message) => message.content)
+      .slice(-4);
+
+    return [...recentUserMessages, userMessage].join("\n");
+  }
+
+  async chatWithAssessorStream(
+    userMessage: string,
+    conversationHistory: ChatHistoryMessage[] = [],
+  ): Promise<ChatWithAssessorStreamResult> {
     const normalizedMessage = userMessage.trim();
+    const normalizedHistory = this.normalizeChatHistory(conversationHistory);
+
     if (normalizedMessage.length === 0) {
       const reply =
         "Comparte tu consulta y con gusto te ayudo a encontrar una propiedad ideal en el Valle de Aburra.";
@@ -952,7 +984,11 @@ class AIService {
       };
     }
 
-    const contextProperties = await this.searchSimilarProperties(normalizedMessage, 5);
+    const contextualSearchQuery = this.buildContextualSearchQuery(
+      normalizedMessage,
+      normalizedHistory,
+    );
+    const contextProperties = await this.searchSimilarProperties(contextualSearchQuery, 5);
     const context = this.formatPropertiesAsContext(contextProperties);
 
     if (!this.client) {
@@ -967,7 +1003,7 @@ class AIService {
     }
 
     const systemPrompt =
-      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Se amable, conciso y usa jerga local muy sutil (parce, super). NUNCA inventes propiedades o metricas. Para preguntas exactas, filtros por presupuesto/barrio/ciudad, rankings, conteos, promedios, minimos, maximos o analitica del catalogo, USA OBLIGATORIAMENTE query_public_properties antes de responder. Esa herramienta solo permite SQL SELECT sobre la vista virtual public_properties, con columnas id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured y created_at. Ejemplo para presupuesto y barrio: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE price <= 200000 AND (neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%') ORDER BY price ASC LIMIT 5. Ejemplo para barrio con mas arriendos: SELECT COALESCE(neighborhood, 'Sin barrio') AS neighborhood, COUNT(*) AS total FROM public_properties GROUP BY COALESCE(neighborhood, 'Sin barrio') ORDER BY total DESC LIMIT 5. Usa search_catalog solo para busquedas simples por ciudad/precio si no necesitas SQL agregado. Usa el contexto semantico solo como apoyo conversacional, no como fuente total de verdad. Si el usuario busca algo que NO existe en los resultados reales, dile que los buenos arriendos vuelan rapido y ofrece crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE create_match_alert para guardarlo en el sistema. Nunca uses create_match_alert sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
+      "Eres el Asesor Inmobiliario de RentVago, experto en arriendos del Valle de Aburra (Medellin, Envigado, Itagui, etc.). Habla en espanol colombiano neutro, amable y directo. NO uses tono paisa ni muletillas como 'parce', 'upa', 'sisas', 'de una' o 'super'. NUNCA inventes propiedades o metricas. Para preguntas exactas, filtros por presupuesto/barrio/ciudad, rankings, conteos, promedios, minimos, maximos o analitica del catalogo, USA OBLIGATORIAMENTE query_public_properties antes de responder. Esa herramienta solo permite SQL SELECT sobre la vista virtual public_properties, con columnas id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured y created_at. En RentVago, palabras como casa, apartamento, apartaestudio, apto, inmueble, hogar, arriendo o propiedad significan propiedad disponible en general: NO filtres por la columna type aunque el usuario diga casa o apartamento, salvo que el usuario pida explicitamente comparar tipos. Si el usuario corrige o continua con frases como 'entonces cuales me servirian', 'si tenemos', 'revisa en la base de datos' o 'de menos de X', usa el historial reciente para completar barrio, presupuesto y criterio. Ejemplo para 'cual es la casa mas barata': SELECT id, title, price, city, neighborhood, rooms FROM public_properties ORDER BY price ASC LIMIT 5. Ejemplo para presupuesto y barrio: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE price <= 200000 AND (neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%') ORDER BY price ASC LIMIT 5. Ejemplo para barrio con mas arriendos: SELECT COALESCE(neighborhood, 'Sin barrio') AS neighborhood, COUNT(*) AS total FROM public_properties GROUP BY COALESCE(neighborhood, 'Sin barrio') ORDER BY total DESC LIMIT 5. Usa search_catalog solo para busquedas simples por ciudad/precio si no necesitas SQL agregado. Usa el contexto semantico solo como apoyo conversacional, no como fuente total de verdad. Si no existen resultados reales, dilo con claridad y ofrece crear una 'Alerta de Match'. Pide nombre y WhatsApp o telefono. CUANDO te de esos datos, usa OBLIGATORIAMENTE create_match_alert para guardarlo en el sistema. Nunca uses create_match_alert sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
 
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -975,6 +1011,10 @@ class AIService {
           role: "system",
           content: `${systemPrompt}\n\nContexto de propiedades disponibles:\n${context}`,
         },
+        ...normalizedHistory.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
         {
           role: "user",
           content: normalizedMessage,
@@ -1099,8 +1139,14 @@ class AIService {
     }
   }
 
-  async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
-    const { replyStream, contextProperties } = await this.chatWithAssessorStream(userMessage);
+  async chatWithAssessor(
+    userMessage: string,
+    conversationHistory: ChatHistoryMessage[] = [],
+  ): Promise<ChatWithAssessorResult> {
+    const { replyStream, contextProperties } = await this.chatWithAssessorStream(
+      userMessage,
+      conversationHistory,
+    );
     const reader = replyStream.getReader();
     const decoder = new TextDecoder();
     let reply = "";
