@@ -1,6 +1,8 @@
 import { leaseUseCases } from "@/modules/admin/application/lease.use-cases";
 import { AdminLeasesClient } from "./admin-leases-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLeasesPage() {
   const raw = await leaseUseCases.getAllLeases();
   const leases = raw.map((l) => ({
