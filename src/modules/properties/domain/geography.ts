@@ -2,7 +2,7 @@ export const CITY_CATALOG = [
   {
     slug: "medellin",
     name: "Medellin",
-    aliases: ["medellin"],
+    aliases: ["medellin", "medellín"],
   },
   {
     slug: "sabaneta",
@@ -17,7 +17,7 @@ export const CITY_CATALOG = [
   {
     slug: "bogota",
     name: "Bogota",
-    aliases: ["bogota"],
+    aliases: ["bogota", "bogotá"],
   },
   {
     slug: "cali",

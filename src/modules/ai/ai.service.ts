@@ -1,12 +1,16 @@
 import OpenAI from "openai";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { resolveCityByInput } from "@/modules/properties/domain/geography";
 
 type PropertyEmbeddingPrice = number | string | { toString(): string };
 
-const EMBEDDING_MODEL = "text-embedding-3-small";
-const CHAT_MODEL = "gpt-4o-mini";
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-embedding-001";
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL?.trim() || "gemini-2.5-flash";
 const CREATE_MATCH_ALERT_TOOL_NAME = "create_match_alert";
+const SEARCH_CATALOG_TOOL_NAME = "search_catalog";
 const MAX_TOOL_CALL_ROUNDS = 3;
 
 const MATCH_ALERT_TOOL = {
@@ -37,10 +41,51 @@ const MATCH_ALERT_TOOL = {
   },
 };
 
+const SEARCH_CATALOG_TOOL = {
+  type: "function" as const,
+  function: {
+    name: SEARCH_CATALOG_TOOL_NAME,
+    description:
+      "Util para cuando el usuario pide la propiedad mas barata, mas cara, o busca por una ciudad y presupuesto exacto.",
+    parameters: {
+      type: "object",
+      properties: {
+        city: {
+          type: "string",
+          description: "Ciudad objetivo para filtrar el catalogo (ej: Medellin, Envigado).",
+        },
+        maxPrice: {
+          type: "number",
+          description: "Precio maximo en COP.",
+        },
+        minPrice: {
+          type: "number",
+          description: "Precio minimo en COP.",
+        },
+        sortBy: {
+          type: "string",
+          enum: ["price_asc", "price_desc", "recent"],
+          description: "Orden del resultado: menor precio, mayor precio o mas recientes.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+};
+
 interface MatchAlertToolArgs {
   name: string;
   phone: string;
   criteria: string;
+}
+
+type SearchCatalogSortBy = "price_asc" | "price_desc" | "recent";
+
+interface SearchCatalogToolArgs {
+  city?: string;
+  maxPrice?: number;
+  minPrice?: number;
+  sortBy?: SearchCatalogSortBy;
 }
 
 export interface Property {
@@ -73,6 +118,11 @@ export interface ChatWithAssessorResult {
   contextProperties: SimilarProperty[];
 }
 
+export interface ChatWithAssessorStreamResult {
+  replyStream: ReadableStream<Uint8Array>;
+  contextProperties: SimilarProperty[];
+}
+
 const toPriceString = (price: PropertyEmbeddingPrice): string => {
   if (typeof price === "number") return Number.isFinite(price) ? String(price) : "0";
   if (typeof price === "string") return price;
@@ -87,8 +137,13 @@ class AIService {
   private hasWarnedMissingKey = false;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    this.client = apiKey ? new OpenAI({ apiKey }) : null;
+    const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+    this.client = apiKey
+      ? new OpenAI({
+          apiKey,
+          baseURL: GEMINI_BASE_URL,
+        })
+      : null;
   }
 
   private buildPropertyEmbeddingInput(property: Property): string {
@@ -105,7 +160,9 @@ class AIService {
   private warnMissingKeyOnce(): void {
     if (!this.hasWarnedMissingKey) {
       this.hasWarnedMissingKey = true;
-      logger.warn("OPENAI_API_KEY is missing. AI features are running in fallback mode.");
+      logger.warn(
+        "GEMINI_API_KEY/GOOGLE_API_KEY is missing. AI features are running in fallback mode.",
+      );
     }
   }
 
@@ -131,7 +188,7 @@ class AIService {
 
       const embedding = response.data[0]?.embedding;
       if (!embedding || embedding.length === 0) {
-        logger.warn("OpenAI returned an empty embedding for user query.", {
+        logger.warn("Gemini returned an empty embedding for user query.", {
           userQuery,
         });
         return null;
@@ -139,7 +196,7 @@ class AIService {
 
       return normalizeEmbedding(embedding);
     } catch (error: unknown) {
-      logger.error("Failed to generate query embedding with OpenAI.", {
+      logger.error("Failed to generate query embedding with Gemini.", {
         error: error instanceof Error ? error.message : String(error),
       });
       return null;
@@ -184,6 +241,33 @@ class AIService {
       .join("; ");
 
     return `Parce, te recomiendo estas opciones que hacen buen match: ${suggestions}. Si quieres, te filtro más fino por barrio, habitaciones o presupuesto.`;
+  }
+
+  private buildUnavailableAIReply(): string {
+    return "El asesor IA esta temporalmente no disponible por limite de uso del proveedor. Puedes intentar de nuevo en unos minutos; mientras tanto, revisa las propiedades sugeridas que te muestro abajo.";
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    return String(error);
+  }
+
+  private isQuotaOrRateLimitError(error: unknown): boolean {
+    const message = this.getErrorMessage(error).toLowerCase();
+
+    return (
+      message.includes("429") ||
+      message.includes("quota") ||
+      message.includes("rate limit") ||
+      message.includes("too many requests")
+    );
   }
 
   private async searchByKeywordFallback(
@@ -244,6 +328,7 @@ class AIService {
     }
 
     const queryVector = this.toVectorLiteral(queryEmbedding);
+    const embeddingDimensions = queryEmbedding.length;
 
     type SimilarPropertyRow = {
       id: string;
@@ -257,25 +342,40 @@ class AIService {
       similarity: number;
     };
 
-    const rows = await prisma.$queryRaw<SimilarPropertyRow[]>`
-      SELECT
-        "id",
-        "title",
-        "description",
-        "price"::text AS "price",
-        "city",
-        "neighborhood",
-        "rooms",
-        "type"::text AS "propertyType",
-        (1 - ("embedding" <=> ${queryVector}::vector))::double precision AS "similarity"
-      FROM "Property"
-      WHERE "status" = 'AVAILABLE'::"PropertyStatus"
-        AND "embedding" IS NOT NULL
-      ORDER BY "embedding" <=> ${queryVector}::vector ASC
-      LIMIT ${safeLimit}
-    `;
+    try {
+      const rows = await prisma.$queryRaw<SimilarPropertyRow[]>`
+        SELECT
+          "id",
+          "title",
+          "description",
+          "price"::text AS "price",
+          "city",
+          "neighborhood",
+          "rooms",
+          "type"::text AS "propertyType",
+          (1 - ("embedding" <=> ${queryVector}::vector))::double precision AS "similarity"
+        FROM "Property"
+        WHERE "status" = 'AVAILABLE'::"PropertyStatus"
+          AND "embedding" IS NOT NULL
+          AND vector_dims("embedding") = ${embeddingDimensions}
+        ORDER BY "embedding" <=> ${queryVector}::vector ASC
+        LIMIT ${safeLimit}
+      `;
 
-    return rows;
+      if (rows.length === 0) {
+        return this.searchByKeywordFallback(normalizedQuery, safeLimit);
+      }
+
+      return rows;
+    } catch (error: unknown) {
+      const errorMessage = this.getErrorMessage(error);
+
+      logger.warn("Vector search failed. Falling back to keyword search.", {
+        error: errorMessage,
+      });
+
+      return this.searchByKeywordFallback(normalizedQuery, safeLimit);
+    }
   }
 
   async generatePropertyEmbedding(property: Property): Promise<number[] | null> {
@@ -293,7 +393,7 @@ class AIService {
 
       const embedding = response.data[0]?.embedding;
       if (!embedding || embedding.length === 0) {
-        logger.warn("OpenAI returned an empty embedding for property.", {
+        logger.warn("Gemini returned an empty embedding for property.", {
           title: property.title,
           city: property.city,
         });
@@ -302,7 +402,7 @@ class AIService {
 
       return normalizeEmbedding(embedding);
     } catch (error: unknown) {
-      logger.error("Failed to generate property embedding with OpenAI.", {
+      logger.error("Failed to generate property embedding with Gemini.", {
         error: error instanceof Error ? error.message : String(error),
         title: property.title,
         city: property.city,
@@ -357,6 +457,73 @@ class AIService {
     }
   }
 
+  private parseOptionalNumber(value: unknown): number | null {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  }
+
+  private parseSearchCatalogToolArgs(rawArguments: string): SearchCatalogToolArgs | null {
+    try {
+      const parsed: unknown = JSON.parse(rawArguments);
+      if (!parsed || typeof parsed !== "object") return null;
+
+      const candidate = parsed as Record<string, unknown>;
+      const args: SearchCatalogToolArgs = {};
+
+      if (typeof candidate.city === "string") {
+        const city = candidate.city.trim();
+        if (city.length > 0) {
+          args.city = city;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(candidate, "minPrice")) {
+        const parsedMinPrice = this.parseOptionalNumber(candidate.minPrice);
+        if (parsedMinPrice === null) return null;
+        args.minPrice = parsedMinPrice;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(candidate, "maxPrice")) {
+        const parsedMaxPrice = this.parseOptionalNumber(candidate.maxPrice);
+        if (parsedMaxPrice === null) return null;
+        args.maxPrice = parsedMaxPrice;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(candidate, "sortBy")) {
+        const sortBy = candidate.sortBy;
+        if (
+          sortBy !== "price_asc" &&
+          sortBy !== "price_desc" &&
+          sortBy !== "recent"
+        ) {
+          return null;
+        }
+
+        args.sortBy = sortBy;
+      }
+
+      if (
+        args.minPrice !== undefined &&
+        args.maxPrice !== undefined &&
+        args.minPrice > args.maxPrice
+      ) {
+        return null;
+      }
+
+      return args;
+    } catch {
+      return null;
+    }
+  }
+
   private async executeCreateMatchAlertTool(rawArguments: string): Promise<string> {
     const args = this.parseMatchAlertToolArgs(rawArguments);
 
@@ -398,6 +565,102 @@ class AIService {
     }
   }
 
+  private async executeSearchCatalogTool(rawArguments: string): Promise<string> {
+    const args = this.parseSearchCatalogToolArgs(rawArguments);
+
+    if (!args) {
+      return JSON.stringify({
+        ok: false,
+        error:
+          "Argumentos invalidos para search_catalog. city es string, minPrice/maxPrice son numeros y sortBy debe ser price_asc, price_desc o recent.",
+      });
+    }
+
+    const where: Prisma.PropertyWhereInput = {
+      status: "AVAILABLE",
+    };
+
+    if (args.city) {
+      const resolvedCity = resolveCityByInput(args.city);
+
+      if (resolvedCity) {
+        const cityCandidates = Array.from(
+          new Set([args.city, resolvedCity.name, ...resolvedCity.aliases]),
+        );
+
+        where.OR = cityCandidates.map((candidate) => ({
+          city: {
+            contains: candidate,
+            mode: "insensitive",
+          },
+        }));
+      } else {
+        where.city = {
+          contains: args.city,
+          mode: "insensitive",
+        };
+      }
+    }
+
+    if (args.minPrice !== undefined || args.maxPrice !== undefined) {
+      where.price = {
+        ...(args.minPrice !== undefined ? { gte: args.minPrice } : {}),
+        ...(args.maxPrice !== undefined ? { lte: args.maxPrice } : {}),
+      };
+    }
+
+    const orderBy: Prisma.PropertyOrderByWithRelationInput =
+      args.sortBy === "price_asc"
+        ? { price: "asc" }
+        : args.sortBy === "price_desc"
+          ? { price: "desc" }
+          : { createdAt: "desc" };
+
+    try {
+      const properties = await prisma.property.findMany({
+        where,
+        orderBy,
+        take: 3,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          price: true,
+          city: true,
+          neighborhood: true,
+          rooms: true,
+          type: true,
+          createdAt: true,
+        },
+      });
+
+      return JSON.stringify({
+        ok: true,
+        count: properties.length,
+        filtersApplied: {
+          city: args.city ?? null,
+          minPrice: args.minPrice ?? null,
+          maxPrice: args.maxPrice ?? null,
+          sortBy: args.sortBy ?? "recent",
+        },
+        properties: properties.map((property) => ({
+          ...property,
+          price: property.price.toString(),
+          createdAt: property.createdAt.toISOString(),
+        })),
+      });
+    } catch (error: unknown) {
+      logger.error("Failed to search catalog from tool call.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return JSON.stringify({
+        ok: false,
+        error: "No fue posible consultar el catalogo en este momento.",
+      });
+    }
+  }
+
   private hasLikelyPhone(text: string): boolean {
     return /(?:\+?\d[\d\s-]{6,}\d)/.test(text);
   }
@@ -406,12 +669,73 @@ class AIService {
     return properties.some((property) => property.similarity >= 0.8);
   }
 
-  async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
+  private createTextStreamFromString(text: string): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder();
+
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(text));
+        controller.close();
+      },
+    });
+  }
+
+  private async createAssistantReplyStream(
+    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  ): Promise<{ stream: ReadableStream<Uint8Array> | null; error?: unknown }> {
+    if (!this.client) {
+      return { stream: null };
+    }
+
+    try {
+      const completionStream = await this.client.chat.completions.create({
+        model: CHAT_MODEL,
+        temperature: 0.35,
+        messages,
+        stream: true,
+      });
+
+      const encoder = new TextEncoder();
+
+      return {
+        stream: new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            for await (const chunk of completionStream) {
+              const contentChunk = chunk.choices[0]?.delta?.content;
+
+              if (contentChunk) {
+                controller.enqueue(encoder.encode(contentChunk));
+              }
+            }
+
+            controller.close();
+          } catch (error: unknown) {
+            controller.error(error);
+          }
+        },
+        }),
+      };
+    } catch (error: unknown) {
+      logger.error("Failed to create streaming chat completion for assessor.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return {
+        stream: null,
+        error,
+      };
+    }
+  }
+
+  async chatWithAssessorStream(userMessage: string): Promise<ChatWithAssessorStreamResult> {
     const normalizedMessage = userMessage.trim();
     if (normalizedMessage.length === 0) {
+      const reply =
+        "Comparte tu consulta y con gusto te ayudo a encontrar una propiedad ideal en el Valle de Aburra.";
+
       return {
-        reply:
-          "Comparte tu consulta y con gusto te ayudo a encontrar una propiedad ideal en el Valle de Aburra.",
+        replyStream: this.createTextStreamFromString(reply),
         contextProperties: [],
       };
     }
@@ -421,14 +745,17 @@ class AIService {
 
     if (!this.client) {
       this.warnMissingKeyOnce();
+
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(
+          this.buildFallbackChatReply(contextProperties),
+        ),
         contextProperties,
       };
     }
 
     const systemPrompt =
-      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Usa el siguiente contexto de propiedades disponibles para responder al usuario. Se amable, conciso, usa jerga local muy sutil (parce, super) y si hay propiedades que hacen match, recomiendalas con entusiasmo. NUNCA inventes propiedades que no esten en el contexto. Si el usuario busca algo que NO esta en el contexto de propiedades disponibles, dile que los buenos arriendos vuelan rapido, y ofrecelo crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE la herramienta create_match_alert para guardarlo en el sistema. Nunca uses la herramienta sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
+      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Usa el siguiente contexto de propiedades disponibles para responder al usuario. Se amable, conciso, usa jerga local muy sutil (parce, super) y si hay propiedades que hacen match, recomiendalas con entusiasmo. NUNCA inventes propiedades que no esten en el contexto. Si el usuario hace preguntas sobre precios especificos, ordenamiento (ej. 'la mas barata', 'la mas cara') o filtros exactos que la busqueda semantica inicial no resolvio, USA OBLIGATORIAMENTE la herramienta search_catalog para obtener datos reales de base de datos antes de responder. Si el usuario busca algo que NO esta en el contexto de propiedades disponibles, dile que los buenos arriendos vuelan rapido, y ofrecelo crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE la herramienta create_match_alert para guardarlo en el sistema. Nunca uses la herramienta sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
 
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -455,26 +782,22 @@ class AIService {
           model: CHAT_MODEL,
           temperature: 0.35,
           messages,
-          tools: [MATCH_ALERT_TOOL],
+          tools: [MATCH_ALERT_TOOL, SEARCH_CATALOG_TOOL],
           tool_choice: round === 0 ? toolChoice : "auto",
         });
 
         const assistantMessage = completion.choices[0]?.message;
-        if (!assistantMessage) break;
-
-        messages.push({
-          role: "assistant",
-          content: assistantMessage.content ?? "",
-          tool_calls: assistantMessage.tool_calls,
-        });
+        if (!assistantMessage) {
+          break;
+        }
 
         const toolCalls = assistantMessage.tool_calls ?? [];
         if (toolCalls.length === 0) {
-          const reply = assistantMessage.content?.trim();
+          const immediateReply = assistantMessage.content?.trim();
 
-          if (reply) {
+          if (immediateReply) {
             return {
-              reply,
+              replyStream: this.createTextStreamFromString(immediateReply),
               contextProperties,
             };
           }
@@ -482,10 +805,19 @@ class AIService {
           break;
         }
 
+        messages.push({
+          role: "assistant",
+          content: assistantMessage.content ?? "",
+          tool_calls: assistantMessage.tool_calls,
+        });
+
         for (const toolCall of toolCalls) {
           if (toolCall.type !== "function") continue;
 
-          if (toolCall.function.name !== CREATE_MATCH_ALERT_TOOL_NAME) {
+          if (
+            toolCall.function.name !== CREATE_MATCH_ALERT_TOOL_NAME &&
+            toolCall.function.name !== SEARCH_CATALOG_TOOL_NAME
+          ) {
             messages.push({
               role: "tool",
               tool_call_id: toolCall.id,
@@ -497,7 +829,10 @@ class AIService {
             continue;
           }
 
-          const toolResult = await this.executeCreateMatchAlertTool(toolCall.function.arguments);
+          const toolResult =
+            toolCall.function.name === CREATE_MATCH_ALERT_TOOL_NAME
+              ? await this.executeCreateMatchAlertTool(toolCall.function.arguments)
+              : await this.executeSearchCatalogTool(toolCall.function.arguments);
 
           messages.push({
             role: "tool",
@@ -507,20 +842,80 @@ class AIService {
         }
       }
 
+      const streamResult = await this.createAssistantReplyStream(messages);
+      const replyStream = streamResult.stream;
+
+      if (replyStream) {
+        return {
+          replyStream,
+          contextProperties,
+        };
+      }
+
+      if (this.isQuotaOrRateLimitError(streamResult.error)) {
+        return {
+          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
+          contextProperties,
+        };
+      }
+
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(
+          this.buildFallbackChatReply(contextProperties),
+        ),
         contextProperties,
       };
     } catch (error: unknown) {
-      logger.error("Failed to generate chat completion for assessor.", {
+      logger.error("Failed to generate streaming chat completion for assessor.", {
         error: error instanceof Error ? error.message : String(error),
       });
 
+      if (this.isQuotaOrRateLimitError(error)) {
+        return {
+          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
+          contextProperties,
+        };
+      }
+
       return {
-        reply: this.buildFallbackChatReply(contextProperties),
+        replyStream: this.createTextStreamFromString(this.buildFallbackChatReply(contextProperties)),
         contextProperties,
       };
     }
+  }
+
+  async chatWithAssessor(userMessage: string): Promise<ChatWithAssessorResult> {
+    const { replyStream, contextProperties } = await this.chatWithAssessorStream(userMessage);
+    const reader = replyStream.getReader();
+    const decoder = new TextDecoder();
+    let reply = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        if (value) {
+          reply += decoder.decode(value, { stream: true });
+        }
+      }
+
+      reply += decoder.decode();
+    } catch (error: unknown) {
+      logger.error("Failed to read assessor stream response.", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    const normalizedReply = reply.trim();
+
+    return {
+      reply: normalizedReply || this.buildFallbackChatReply(contextProperties),
+      contextProperties,
+    };
   }
 }
 
