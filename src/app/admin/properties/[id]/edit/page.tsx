@@ -2,6 +2,8 @@ import { propertiesUseCases } from "@/modules/properties/application/property.us
 import { notFound } from "next/navigation";
 import { EditPropertyForm } from "./edit-property-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditPropertyPage({
   params,
 }: {

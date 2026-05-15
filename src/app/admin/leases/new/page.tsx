@@ -2,6 +2,8 @@ import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { NewLeaseForm } from "./new-lease-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewLeasePage() {
   const [rawProperties, rawUsers] = await Promise.all([
     propertiesUseCases.listPropertyOptions(),

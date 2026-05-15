@@ -1,6 +1,8 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { AdminPropertiesClient } from "./admin-properties-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPropertiesPage() {
   const raw = await propertiesUseCases.listAdminProperties();
   const properties = raw.map((p) => ({
