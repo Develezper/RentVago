@@ -1,4 +1,6 @@
-import type { LeaseStatus, Role } from "@/generated/prisma/enums";
+import type { LeaseStatus, Role, ScraperPlatform } from "@/generated/prisma/enums";
+
+export type { ScraperPlatform };
 
 export interface AdminStats {
   activeUsers: number;
@@ -107,6 +109,7 @@ export interface ScrapingFuenteEntity {
   nombre: string;
   url: string;
   activo: boolean;
+  plataforma: ScraperPlatform;
   creadoEn: Date;
 }
 
@@ -114,12 +117,14 @@ export interface ScrapingFuenteCreateInput {
   nombre: string;
   url: string;
   activo: boolean;
+  plataforma?: ScraperPlatform;
 }
 
 export interface ScrapingFuenteUpdateInput {
   nombre?: string;
   url?: string;
   activo?: boolean;
+  plataforma?: ScraperPlatform;
 }
 
 export interface ScrapedPropertyInput {

@@ -4,6 +4,15 @@ import { CheckCircle2, ImageOff, Loader2, Play, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+const PLATFORMS = [
+  { value: "FACEBOOK", label: "Facebook Marketplace" },
+  { value: "MERCADOLIBRE", label: "MercadoLibre" },
+  { value: "AIRBNB", label: "Airbnb" },
+  { value: "BOOKING", label: "Booking.com" },
+] as const;
+
+type PlatformValue = (typeof PLATFORMS)[number]["value"];
+
 type ScrapingFuente = {
   id: string;
   nombre: string;
@@ -26,8 +35,8 @@ type PreviewProperty = {
 
 type ScraperRunResponse = {
   data: {
-    sourceName: "Facebook";
-    city: string;
+    platform: string;
+    query: string;
     limit: number;
     preview: boolean;
     fetched: number;
@@ -60,27 +69,27 @@ const readErrorMessage = (payload: unknown): string => {
   if (payload && typeof payload === "object" && "error" in payload) {
     return String((payload as Record<string, unknown>).error);
   }
-
   return "No se pudo ejecutar el scraping.";
 };
 
 export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
   const activeSources = useMemo(() => fuentes.filter((fuente) => fuente.activo), [fuentes]);
+  const [platform, setPlatform] = useState<PlatformValue>("FACEBOOK");
   const [selectedCity, setSelectedCity] = useState(activeSources[0]?.city ?? "");
   const [limit, setLimit] = useState(10);
   const [preview, setPreview] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [properties, setProperties] = useState<PreviewProperty[]>([]);
-  const [lastRun, setLastRun] = useState<{ city: string; limit: number } | null>(null);
+  const [lastRun, setLastRun] = useState<{ query: string; platform: string; limit: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const executeScraper = async (mode: "preview" | "save") => {
-    const city = selectedCity.trim();
+    const query = selectedCity.trim();
     const normalizedLimit = clampLimit(limit);
 
-    if (!city) {
-      setError("Selecciona o escribe una ciudad para ejecutar el scraper.");
+    if (!query) {
+      setError("Escribe una ciudad o búsqueda para ejecutar el scraper.");
       return null;
     }
 
@@ -102,15 +111,16 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
         !isPreviewRun &&
         preview &&
         properties.length > 0 &&
-        lastRun?.city === city &&
+        lastRun?.query === query &&
+        lastRun?.platform === platform &&
         lastRun.limit === normalizedLimit;
       const propertiesToSave = shouldSaveCurrentPreview ? properties : undefined;
       const response = await fetch("/api/scraper/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sourceName: "Facebook",
-          city,
+          platform,
+          query,
           limit: normalizedLimit,
           preview: isPreviewRun,
           properties: propertiesToSave,
@@ -126,12 +136,12 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
 
       if (isPreviewRun) {
         setProperties(result.properties);
-        setLastRun({ city: result.city, limit: result.limit });
+        setLastRun({ query: result.query, platform: result.platform, limit: result.limit });
         toast.success(`Preview listo: ${result.fetched} propiedades encontradas.`);
       } else {
         const discardedText =
           result.discarded > 0 ? ` ${result.discarded} descartadas por datos incompletos.` : "";
-        toast.success(`Se guardaron ${result.saved} propiedades para ${result.city}.${discardedText}`);
+        toast.success(`Se guardaron ${result.saved} propiedades para ${result.query}.${discardedText}`);
         setProperties([]);
         setLastRun(null);
         onSaved?.();
@@ -165,7 +175,7 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
           </p>
           <h2 className="mt-1 text-xl font-black text-white">Scraping dinámico</h2>
           <p className="mt-2 max-w-2xl text-sm font-medium text-gray-400">
-            Trae propiedades en vivo desde Facebook Marketplace, revisa el preview y confirma
+            Trae propiedades en vivo desde la plataforma seleccionada, revisa el preview y confirma
             solo cuando quieras guardarlas.
           </p>
         </div>
@@ -177,10 +187,27 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
         ) : null}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_0.7fr_0.9fr]">
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr_0.55fr_0.8fr]">
         <label className="block">
           <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-            Ciudad o fuente
+            Plataforma
+          </span>
+          <select
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value as PlatformValue)}
+            className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm font-semibold text-white outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+          >
+            {PLATFORMS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+            Ciudad / búsqueda
           </span>
           <input
             list="scraping-cities"
@@ -227,7 +254,7 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
                 : "border-gray-800 bg-gray-900 text-gray-400"
             }`}
           >
-            <span>{preview ? "Preview activo" : "Guardar directo"}</span>
+            <span>{preview ? "Preview" : "Directo"}</span>
             <span
               className={`flex h-6 w-11 items-center rounded-full p-1 transition ${
                 preview ? "bg-green-500" : "bg-gray-700"
@@ -287,7 +314,7 @@ export function ScrapingPanel({ fuentes, onSaved }: ScrapingPanelProps) {
                 Resultados en vivo
               </p>
               <h3 className="text-lg font-black text-white">
-                Preview para {lastRun?.city} ({lastRun?.limit} solicitadas)
+                Preview para {lastRun?.query} ({lastRun?.limit} solicitadas)
               </h3>
             </div>
             <p className="text-sm font-medium text-gray-400">

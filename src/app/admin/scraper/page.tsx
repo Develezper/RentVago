@@ -7,6 +7,7 @@ export default async function AdminScraperPage() {
     id: f.id,
     nombre: f.nombre,
     city: f.url,
+    plataforma: f.plataforma,
     activo: f.activo,
     creadoEn: f.creadoEn.toISOString(),
   }));
