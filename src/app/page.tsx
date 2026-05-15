@@ -91,7 +91,7 @@ export default async function HomePage() {
 
           <h1 className="mb-6 text-5xl font-black tracking-tight text-white sm:text-7xl">
             Gestiona tus alquileres con{" "}
-            <span className="bg-linear-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
+            <span className="text-green-400">
               RentVago
             </span>
           </h1>
@@ -104,14 +104,14 @@ export default async function HomePage() {
           <div className="mt-12 flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Link
               href="/register"
-              className="group flex items-center gap-2 rounded-full bg-green-500 px-8 py-4 text-lg font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.6)] active:scale-95"
+              className="group flex items-center gap-2 rounded-full bg-green-500 px-8 py-4 text-lg font-bold text-black shadow-[0_0_20px_rgba(233,82,22,0.32)] transition-all hover:bg-green-400 hover:shadow-[0_0_30px_rgba(233,82,22,0.48)] active:scale-95"
             >
               Empezar gratis
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/login"
-              className="group flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-8 py-4 text-lg font-bold text-green-300 shadow-[0_0_18px_rgba(34,197,94,0.12)] transition-all hover:border-green-400 hover:bg-green-500/20 hover:text-green-200 active:scale-95"
+              className="group flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-8 py-4 text-lg font-bold text-green-300 shadow-[0_0_18px_rgba(233,82,22,0.12)] transition-all hover:border-green-400 hover:bg-green-500/20 hover:text-green-200 active:scale-95"
             >
               Iniciar sesion
               <LogIn className="h-5 w-5 transition-transform group-hover:translate-x-1" />
