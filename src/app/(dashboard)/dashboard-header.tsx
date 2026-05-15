@@ -52,11 +52,18 @@ const navItems: NavItem[] = [
 ];
 
 const isActivePath = (pathname: string, href: string) => {
-  if (href === "/search") {
-    return pathname === href || pathname.startsWith("/search/");
+  if (pathname === href) return true;
+
+  // Evitar que "Mis propiedades" (/my-properties) se resalte cuando estamos en "Publicar" (/my-properties/new)
+  if (href === "/my-properties" && pathname.startsWith("/my-properties/new")) {
+    return false;
   }
 
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (href === "/search") {
+    return pathname.startsWith("/search/");
+  }
+
+  return pathname.startsWith(`${href}/`);
 };
 
 export function DashboardHeader({ roleLabel, roleValue }: DashboardHeaderProps) {

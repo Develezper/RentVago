@@ -382,7 +382,7 @@ export function AIChat() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ej: Busco apartaestudio en Envigado por 1.5M"
-                className="chat-input w-full bg-transparent px-2 text-sm text-white outline-none placeholder:text-gray-500"
+                className="chat-input w-full bg-transparent px-2 text-sm outline-none"
                 disabled={isLoading}
                 maxLength={500}
               />

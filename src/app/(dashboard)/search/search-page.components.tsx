@@ -60,7 +60,7 @@ export function SearchHero({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Ej: apartamento con balcon y parqueadero"
-            className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
           <button
             type="submit"
@@ -122,7 +122,7 @@ export function SearchFiltersPanel({
             value={filters.location}
             onChange={(event) => onFilterChange("location", event.target.value)}
             placeholder="Ej: Laureles, Robledo, El Poblado"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -138,7 +138,7 @@ export function SearchFiltersPanel({
             onChange={(event) => onFilterChange("minPrice", event.target.value)}
             onBlur={onPriceRangeBlur}
             placeholder="1200000"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -154,7 +154,7 @@ export function SearchFiltersPanel({
             onChange={(event) => onFilterChange("maxPrice", event.target.value)}
             onBlur={onPriceRangeBlur}
             placeholder="5000000"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -167,7 +167,7 @@ export function SearchFiltersPanel({
             name="rooms"
             value={filters.rooms}
             onChange={(event) => onFilterChange("rooms", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           >
             <option value="">Cualquiera</option>
             <option value="1">1+</option>
@@ -273,7 +273,7 @@ export function SearchResultsToolbar({
           name="sort"
           value={sort}
           onChange={(event) => onSortChange(event.target.value as SearchSort)}
-          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
         >
           <option value="relevance">Relevancia</option>
           <option value="newest">Mas recientes</option>
@@ -289,7 +289,7 @@ export function SearchResultsToolbar({
           name="pageSize"
           value={String(pageSize)}
           onChange={(event) => onPageSizeChange(Number(event.target.value) as SearchPageSize)}
-          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
         >
           {pageSizeValues.map((size) => (
             <option key={size} value={String(size)}>

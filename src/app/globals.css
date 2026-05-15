@@ -79,7 +79,7 @@
   --card: var(--color-charcoal-brown-800);
   --border: var(--color-carbon-black-700);
   --on-primary: var(--color-carbon-black-950);
-  
+
   --color-bg-950: var(--color-carbon-black-900);
   --color-bg-950-50: rgba(27, 26, 24, 0.5);
   --color-bg-900: var(--color-charcoal-brown-800);
@@ -87,7 +87,7 @@
   --color-bg-900-80: rgba(54, 51, 48, 0.8);
   --color-bg-900-50: rgba(54, 51, 48, 0.5);
   --color-bg-800: var(--color-carbon-black-800);
-  
+
   /* Negro / superficies profundas (navbar, cards) */
   --color-black: var(--color-charcoal-brown-800);
   --color-black-95: rgba(54, 51, 48, 0.95);
@@ -252,118 +252,304 @@ body {
 
 /*3. OVERRIDES DE CLASES (ALTO RENDIMIENTO)*/
 
-[class~="bg-gray-950"]    { background-color: var(--color-bg-950) !important; }
-[class~="bg-gray-950/50"] { background-color: var(--color-bg-950-50) !important; }
-[class~="bg-gray-900"]    { background-color: var(--color-bg-900) !important; }
-[class~="bg-gray-900/95"] { background-color: var(--color-bg-900-95) !important; }
-[class~="bg-gray-900/80"] { background-color: var(--color-bg-900-80) !important; }
-[class~="bg-gray-800"]    { background-color: var(--color-bg-800) !important; }
-[class~="bg-black"]       { background-color: var(--color-black) !important; }
-[class~="bg-black/95"]    { background-color: var(--color-black-95) !important; }
-[class~="bg-black/80"]    { background-color: var(--color-black-80) !important; }
-[class~="bg-black/75"]    { background-color: var(--color-black-75) !important; }
-[class~="bg-black/70"]    { background-color: var(--color-black-70) !important; }
-[class~="bg-black/60"]    { background-color: var(--color-black-60) !important; }
+[class~="bg-gray-950"] {
+  background-color: var(--color-bg-950) !important;
+}
+
+[class~="bg-gray-950/50"] {
+  background-color: var(--color-bg-950-50) !important;
+}
+
+[class~="bg-gray-900"] {
+  background-color: var(--color-bg-900) !important;
+}
+
+[class~="bg-gray-900/95"] {
+  background-color: var(--color-bg-900-95) !important;
+}
+
+[class~="bg-gray-900/80"] {
+  background-color: var(--color-bg-900-80) !important;
+}
+
+[class~="bg-gray-800"] {
+  background-color: var(--color-bg-800) !important;
+}
+
+[class~="bg-black"] {
+  background-color: var(--color-black) !important;
+}
+
+[class~="bg-black/95"] {
+  background-color: var(--color-black-95) !important;
+}
+
+[class~="bg-black/80"] {
+  background-color: var(--color-black-80) !important;
+}
+
+[class~="bg-black/75"] {
+  background-color: var(--color-black-75) !important;
+}
+
+[class~="bg-black/70"] {
+  background-color: var(--color-black-70) !important;
+}
+
+[class~="bg-black/60"] {
+  background-color: var(--color-black-60) !important;
+}
+
 [class~="bg-black/50"] {
   background-color: color-mix(in srgb, var(--color-black) 50%, transparent) !important;
 }
 
-[class~="border-gray-800"] { border-color: var(--color-border-800) !important; }
-[class~="border-gray-800/90"] { border-color: color-mix(in srgb, var(--color-border-800) 90%, transparent) !important; }
-[class~="border-gray-700"] { border-color: var(--color-border-700) !important; }
+[class~="border-gray-800"] {
+  border-color: var(--color-border-800) !important;
+}
 
-[class~="text-white"], [class~="text-gray-100"] { color: var(--color-text-white) !important; }
-[class~="text-black"] { color: var(--on-primary) !important; }
-[class~="text-gray-200"] { color: var(--color-text-200) !important; }
-[class~="text-gray-300"] { color: var(--color-text-300) !important; }
-[class~="text-gray-400"] { color: var(--color-text-400) !important; }
-[class~="text-gray-500"] { color: var(--color-text-500) !important; }
-[class~="text-gray-600"] { color: var(--color-text-600) !important; }
+[class~="border-gray-800/90"] {
+  border-color: color-mix(in srgb, var(--color-border-800) 90%, transparent) !important;
+}
 
-[class~="text-green-500"] { color: var(--color-green-500) !important; }
-[class~="text-green-400"] { color: var(--color-green-400) !important; }
-[class~="text-green-300"] { color: var(--color-green-300) !important; }
-[class~="text-green-200"] { color: var(--color-green-200) !important; }
-[class~="bg-green-500"]   { background-color: var(--color-green-500) !important; }
-[class~="bg-green-400"]   { background-color: var(--color-green-400) !important; }
-[class~="bg-green-500/10"] { background-color: var(--color-green-500-10) !important; }
-[class~="bg-green-500/20"] { background-color: var(--color-green-500-20) !important; }
-[class~="bg-green-400/20"] { background-color: var(--color-green-500-20) !important; }
-[class~="border-green-500/30"] { border-color: var(--color-green-500-30) !important; }
-[class~="border-green-500/40"] { border-color: var(--color-green-500-40) !important; }
-[class~="border-green-500/50"] { border-color: var(--color-green-500-50) !important; }
-[class~="border-green-500/60"] { border-color: var(--color-green-500-60) !important; }
-[class~="border-green-400/40"] { border-color: var(--color-green-500-40) !important; }
-[class~="border-green-400/50"] { border-color: var(--color-green-500-50) !important; }
-[class~="border-green-500"] { border-color: var(--color-green-500) !important; }
-[class~="border-green-400"] { border-color: var(--color-green-400) !important; }
-[class~="focus:border-green-500"]:focus { border-color: var(--color-green-500) !important; }
-[class~="focus:ring-green-500"]:focus { --tw-ring-color: var(--color-green-500) !important; }
-[class~="focus:ring-green-500/20"]:focus { --tw-ring-color: var(--color-green-500-20) !important; }
-[class~="focus-within:border-green-400/60"]:focus-within { border-color: var(--color-green-500-60) !important; }
-[class~="hover:border-green-500/60"]:hover { border-color: var(--color-green-500-60) !important; }
-[class~="hover:border-green-500"]:hover { border-color: var(--color-green-500) !important; }
-[class~="hover:border-green-400"]:hover { border-color: var(--color-green-400) !important; }
-[class~="hover:border-green-400/50"]:hover { border-color: var(--color-green-500-50) !important; }
-[class~="hover:bg-green-400"]:hover { background-color: var(--color-green-400) !important; }
-[class~="hover:bg-green-500/20"]:hover { background-color: var(--color-green-500-20) !important; }
-[class~="hover:text-green-400"]:hover { color: var(--color-green-400) !important; }
-[class~="hover:text-green-300"]:hover { color: var(--color-green-300) !important; }
-[class~="hover:text-green-200"]:hover { color: var(--color-green-200) !important; }
+[class~="border-gray-700"] {
+  border-color: var(--color-border-700) !important;
+}
+
+[class~="text-white"],
+[class~="text-gray-100"] {
+  color: var(--color-text-white) !important;
+}
+
+[class~="text-black"] {
+  color: var(--on-primary) !important;
+}
+
+[class~="text-gray-200"] {
+  color: var(--color-text-200) !important;
+}
+
+[class~="text-gray-300"] {
+  color: var(--color-text-300) !important;
+}
+
+[class~="text-gray-400"] {
+  color: var(--color-text-400) !important;
+}
+
+[class~="text-gray-500"] {
+  color: var(--color-text-500) !important;
+}
+
+[class~="text-gray-600"] {
+  color: var(--color-text-600) !important;
+}
+
+[class~="text-green-500"] {
+  color: var(--color-green-500) !important;
+}
+
+[class~="text-green-400"] {
+  color: var(--color-green-400) !important;
+}
+
+[class~="text-green-300"] {
+  color: var(--color-green-300) !important;
+}
+
+[class~="text-green-200"] {
+  color: var(--color-green-200) !important;
+}
+
+[class~="bg-green-500"] {
+  background-color: var(--color-green-500) !important;
+}
+
+[class~="bg-green-400"] {
+  background-color: var(--color-green-400) !important;
+}
+
+[class~="bg-green-500/10"] {
+  background-color: var(--color-green-500-10) !important;
+}
+
+[class~="bg-green-500/20"] {
+  background-color: var(--color-green-500-20) !important;
+}
+
+[class~="bg-green-400/20"] {
+  background-color: var(--color-green-500-20) !important;
+}
+
+[class~="border-green-500/30"] {
+  border-color: var(--color-green-500-30) !important;
+}
+
+[class~="border-green-500/40"] {
+  border-color: var(--color-green-500-40) !important;
+}
+
+[class~="border-green-500/50"] {
+  border-color: var(--color-green-500-50) !important;
+}
+
+[class~="border-green-500/60"] {
+  border-color: var(--color-green-500-60) !important;
+}
+
+[class~="border-green-400/40"] {
+  border-color: var(--color-green-500-40) !important;
+}
+
+[class~="border-green-400/50"] {
+  border-color: var(--color-green-500-50) !important;
+}
+
+[class~="border-green-500"] {
+  border-color: var(--color-green-500) !important;
+}
+
+[class~="border-green-400"] {
+  border-color: var(--color-green-400) !important;
+}
+
+[class~="focus:border-green-500"]:focus {
+  border-color: var(--color-green-500) !important;
+}
+
+[class~="focus:ring-green-500"]:focus {
+  --tw-ring-color: var(--color-green-500) !important;
+}
+
+[class~="focus:ring-green-500/20"]:focus {
+  --tw-ring-color: var(--color-green-500-20) !important;
+}
+
+[class~="focus-within:border-green-400/60"]:focus-within {
+  border-color: var(--color-green-500-60) !important;
+}
+
+[class~="hover:border-green-500/60"]:hover {
+  border-color: var(--color-green-500-60) !important;
+}
+
+[class~="hover:border-green-500"]:hover {
+  border-color: var(--color-green-500) !important;
+}
+
+[class~="hover:border-green-400"]:hover {
+  border-color: var(--color-green-400) !important;
+}
+
+[class~="hover:border-green-400/50"]:hover {
+  border-color: var(--color-green-500-50) !important;
+}
+
+[class~="hover:bg-green-400"]:hover {
+  background-color: var(--color-green-400) !important;
+}
+
+[class~="hover:bg-green-500/20"]:hover {
+  background-color: var(--color-green-500-20) !important;
+}
+
+[class~="hover:text-green-400"]:hover {
+  color: var(--color-green-400) !important;
+}
+
+[class~="hover:text-green-300"]:hover {
+  color: var(--color-green-300) !important;
+}
+
+[class~="hover:text-green-200"]:hover {
+  color: var(--color-green-200) !important;
+}
+
 [class~="from-green-500"] {
   --tw-gradient-from: var(--color-green-500) var(--tw-gradient-from-position) !important;
   --tw-gradient-to: rgba(233, 82, 22, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
 }
+
 [class~="from-green-500/12"] {
   --tw-gradient-from: var(--color-green-500-12) var(--tw-gradient-from-position) !important;
   --tw-gradient-to: rgba(233, 82, 22, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
 }
+
 [class~="from-green-900/20"] {
   --tw-gradient-from: var(--color-green-500-20) var(--tw-gradient-from-position) !important;
   --tw-gradient-to: rgba(233, 82, 22, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
 }
+
 [class~="from-green-400"] {
   --tw-gradient-from: var(--color-green-400) var(--tw-gradient-from-position) !important;
   --tw-gradient-to: rgba(233, 82, 22, 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position)) !important;
 }
+
 [class~="via-green-500"] {
   --tw-gradient-via: var(--color-green-500) var(--tw-gradient-via-position) !important;
   --tw-gradient-stops: var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position) !important;
 }
+
 [class~="via-green-400/60"] {
   --tw-gradient-via: var(--color-green-500-60) var(--tw-gradient-via-position) !important;
   --tw-gradient-stops: var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position) !important;
 }
+
 [class~="to-green-600"] {
   --tw-gradient-to: var(--color-green-600) var(--tw-gradient-to-position) !important;
 }
 
-[class~="bg-gray-700"]    { background-color: var(--color-bg-700) !important; }
-[class~="divide-gray-800"] > * + * { border-color: var(--color-border-800) !important; }
+[class~="bg-gray-700"] {
+  background-color: var(--color-bg-700) !important;
+}
+
+[class~="divide-gray-800"]>*+* {
+  border-color: var(--color-border-800) !important;
+}
 
 [class~="bg-gray-900/50"] {
   background-color: var(--color-bg-900-50) !important;
 }
 
-[class~="bg-gray-600"] { background-color: var(--color-surface-600) !important; }
+[class~="bg-gray-600"] {
+  background-color: var(--color-surface-600) !important;
+}
 
 [class~="hover:bg-green-500/5"]:hover {
   background-color: var(--color-green-500-05) !important;
 }
+
 [class~="hover:bg-green-500/8"]:hover {
   background-color: var(--color-green-500-08) !important;
 }
 
-:root[data-theme="light"] [class~="hover:bg-gray-800"]:hover { background-color: var(--color-bg-800) !important; }
-:root[data-theme="light"] [class~="hover:bg-gray-900"]:hover { background-color: var(--color-bg-900) !important; }
-:root[data-theme="light"] [class~="hover:bg-gray-700"]:hover { background-color: var(--color-bg-700) !important; }
-:root[data-theme="light"] [class~="hover:text-white"]:hover { color: var(--color-text-white) !important; }
-:root[data-theme="light"] [class~="hover:border-gray-700"]:hover { border-color: var(--color-border-700) !important; }
-:root[data-theme="light"] [class~="border-gray-900/70"] { border-color: var(--color-border-800) !important; }
+:root[data-theme="light"] [class~="hover:bg-gray-800"]:hover {
+  background-color: var(--color-bg-800) !important;
+}
+
+:root[data-theme="light"] [class~="hover:bg-gray-900"]:hover {
+  background-color: var(--color-bg-900) !important;
+}
+
+:root[data-theme="light"] [class~="hover:bg-gray-700"]:hover {
+  background-color: var(--color-bg-700) !important;
+}
+
+:root[data-theme="light"] [class~="hover:text-white"]:hover {
+  color: var(--color-text-white) !important;
+}
+
+:root[data-theme="light"] [class~="hover:border-gray-700"]:hover {
+  border-color: var(--color-border-700) !important;
+}
+
+:root[data-theme="light"] [class~="border-gray-900/70"] {
+  border-color: var(--color-border-800) !important;
+}
 
 :root[data-theme="light"] [class~="hover:bg-gray-900/50"]:hover,
 :root[data-theme="light"] [class~="hover:bg-gray-900/40"]:hover,
@@ -430,6 +616,20 @@ body {
   background-color: var(--chat-input-bg) !important;
 }
 
-.chat-input::placeholder {
-  color: var(--chat-placeholder) !important;
+/* 4. ESTILOS DE FORMULARIOS Y PLACEHOLDERS GLOBALES */
+::placeholder {
+  color: var(--color-text-500) !important;
+  opacity: 0.8 !important;
+}
+
+input,
+select,
+textarea {
+  color: var(--foreground) !important;
+}
+
+/* Asegurar que las opciones de select sean legibles */
+select option {
+  background-color: var(--color-bg-900);
+  color: var(--foreground);
 }
