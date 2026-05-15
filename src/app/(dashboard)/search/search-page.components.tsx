@@ -60,7 +60,7 @@ export function SearchHero({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Ej: apartamento con balcon y parqueadero"
-            className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-12 rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
           <button
             type="submit"
@@ -110,8 +110,8 @@ export function SearchFiltersPanel({
   return (
     <aside className="w-full rounded-3xl border border-gray-800 bg-black p-5 shadow-sm sm:p-6">
       <h2 className="text-base font-semibold text-white">Filtros</h2>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <div className="space-y-2 sm:col-span-2 xl:col-span-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+        <div className="space-y-2 sm:col-span-2 xl:col-span-1">
           <label htmlFor="location" className="text-sm font-medium text-gray-400">
             Zona o barrio
           </label>
@@ -122,7 +122,7 @@ export function SearchFiltersPanel({
             value={filters.location}
             onChange={(event) => onFilterChange("location", event.target.value)}
             placeholder="Ej: Laureles, Robledo, El Poblado"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -138,7 +138,7 @@ export function SearchFiltersPanel({
             onChange={(event) => onFilterChange("minPrice", event.target.value)}
             onBlur={onPriceRangeBlur}
             placeholder="1200000"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -154,7 +154,7 @@ export function SearchFiltersPanel({
             onChange={(event) => onFilterChange("maxPrice", event.target.value)}
             onBlur={onPriceRangeBlur}
             placeholder="5000000"
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           />
         </div>
 
@@ -167,7 +167,7 @@ export function SearchFiltersPanel({
             name="rooms"
             value={filters.rooms}
             onChange={(event) => onFilterChange("rooms", event.target.value)}
-            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            className="h-11 w-full rounded-2xl border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
           >
             <option value="">Cualquiera</option>
             <option value="1">1+</option>
@@ -177,51 +177,53 @@ export function SearchFiltersPanel({
           </select>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onFilterChange("verifiedOnly", !filters.verifiedOnly)}
-          className={`h-11 w-full rounded-2xl border px-4 text-sm font-semibold transition sm:col-span-2 xl:col-span-2 ${
-            filters.verifiedOnly
-              ? "border-green-500 bg-green-500/10 text-green-300"
-              : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-600 hover:text-white"
-          }`}
-        >
-          {filters.verifiedOnly
-            ? "Mostrando Publicaciones Verificadas"
-            : "Mostrar solo Publicaciones Verificadas"}
-        </button>
-
         {hasInvalidPriceRange ? (
-          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400 sm:col-span-2 xl:col-span-6">
+          <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400 sm:col-span-2 xl:col-span-4">
             {priceRangeValidationMessage}
           </p>
         ) : null}
 
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="h-11 w-full rounded-2xl border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-400 transition hover:border-gray-600 hover:text-white"
-        >
-          Limpiar filtros
-        </button>
+        <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2 xl:col-span-4 xl:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => onFilterChange("verifiedOnly", !filters.verifiedOnly)}
+            className={`h-11 w-full rounded-2xl border px-4 text-sm font-semibold transition ${
+              filters.verifiedOnly
+                ? "border-green-500 bg-green-500/10 text-green-300"
+                : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-600 hover:text-white"
+            }`}
+          >
+            {filters.verifiedOnly
+              ? "Mostrando Publicaciones Verificadas"
+              : "Mostrar solo Publicaciones Verificadas"}
+          </button>
 
-        <button
-          type="button"
-          onClick={onSaveSearchFilter}
-          disabled={isSavingSearchFilter || hasInvalidPriceRange}
-          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-3 ${
-            isSearchAlertActive
-              ? "border-green-500 bg-green-500/10 text-green-300"
-              : "border-gray-700 bg-gray-900 text-white hover:border-green-500/60"
-          }`}
-        >
-          <Bell className="h-4 w-4" />
-          {isSavingSearchFilter
-            ? "Activando alerta..."
-            : isSearchAlertActive
-              ? "Alerta activa para esta busqueda"
-              : "Activar alerta para esta busqueda"}
-        </button>
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="h-11 w-full rounded-2xl border border-gray-700 bg-gray-900 px-4 text-sm font-medium text-gray-400 transition hover:border-gray-600 hover:text-white"
+          >
+            Limpiar filtros
+          </button>
+
+          <button
+            type="button"
+            onClick={onSaveSearchFilter}
+            disabled={isSavingSearchFilter || hasInvalidPriceRange}
+            className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              isSearchAlertActive
+                ? "border-green-500 bg-green-500/10 text-green-300"
+                : "border-gray-700 bg-gray-900 text-white hover:border-green-500/60"
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            {isSavingSearchFilter
+              ? "Activando alerta..."
+              : isSearchAlertActive
+                ? "Alerta activa para esta busqueda"
+                : "Activar alerta para esta busqueda"}
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -271,7 +273,7 @@ export function SearchResultsToolbar({
           name="sort"
           value={sort}
           onChange={(event) => onSortChange(event.target.value as SearchSort)}
-          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
         >
           <option value="relevance">Relevancia</option>
           <option value="newest">Mas recientes</option>
@@ -287,7 +289,7 @@ export function SearchResultsToolbar({
           name="pageSize"
           value={String(pageSize)}
           onChange={(event) => onPageSizeChange(Number(event.target.value) as SearchPageSize)}
-          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm text-white outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+          className="h-9 rounded-lg border border-gray-800 bg-gray-900 px-3 text-sm outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
         >
           {pageSizeValues.map((size) => (
             <option key={size} value={String(size)}>

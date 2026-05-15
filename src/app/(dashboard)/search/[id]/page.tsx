@@ -355,7 +355,7 @@ export default async function PropertyDetailPage({ params }: PropertyDetailPageP
             href={contactUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-green-500 px-4 text-sm font-extrabold text-black transition hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)]"
+            className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-green-500 px-4 text-sm font-extrabold text-black transition hover:bg-green-400 shadow-[0_0_15px_rgba(233,82,22,0.3)] hover:shadow-[0_0_25px_rgba(233,82,22,0.42)]"
           >
             {contactLabel}
           </a>

@@ -103,7 +103,7 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
                       <div
                         className={`w-2 h-2 rounded-full ${
                           user.isActive
-                            ? "bg-green-500 shadow-[0_0_8px_#22c55e]"
+                            ? "bg-green-500 shadow-[0_0_8px_#e95216]"
                             : "bg-gray-600"
                         }`}
                       />
