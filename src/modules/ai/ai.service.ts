@@ -11,7 +11,10 @@ const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-em
 const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL?.trim() || "gemini-2.5-flash";
 const CREATE_MATCH_ALERT_TOOL_NAME = "create_match_alert";
 const SEARCH_CATALOG_TOOL_NAME = "search_catalog";
+const QUERY_PUBLIC_PROPERTIES_TOOL_NAME = "query_public_properties";
 const MAX_TOOL_CALL_ROUNDS = 3;
+const MAX_AI_SQL_LENGTH = 2000;
+const MAX_AI_SQL_ROWS = 50;
 
 const MATCH_ALERT_TOOL = {
   type: "function" as const,
@@ -73,6 +76,27 @@ const SEARCH_CATALOG_TOOL = {
   },
 };
 
+const QUERY_PUBLIC_PROPERTIES_TOOL = {
+  type: "function" as const,
+  function: {
+    name: QUERY_PUBLIC_PROPERTIES_TOOL_NAME,
+    description:
+      "Ejecuta una consulta SQL SELECT segura sobre la vista virtual public_properties para responder preguntas exactas o analiticas del catalogo disponible.",
+    parameters: {
+      type: "object",
+      properties: {
+        sql: {
+          type: "string",
+          description:
+            "Consulta SQL SELECT contra public_properties. Columnas: id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured, created_at. No uses tablas reales.",
+        },
+      },
+      required: ["sql"],
+      additionalProperties: false,
+    },
+  },
+};
+
 interface MatchAlertToolArgs {
   name: string;
   phone: string;
@@ -86,6 +110,14 @@ interface SearchCatalogToolArgs {
   maxPrice?: number;
   minPrice?: number;
   sortBy?: SearchCatalogSortBy;
+}
+
+interface QueryPublicPropertiesToolArgs {
+  sql: string;
+}
+
+interface ValidatedPublicPropertiesSql {
+  sql: string;
 }
 
 export interface Property {
@@ -524,6 +556,113 @@ class AIService {
     }
   }
 
+  private parseQueryPublicPropertiesToolArgs(
+    rawArguments: string,
+  ): QueryPublicPropertiesToolArgs | null {
+    try {
+      const parsed: unknown = JSON.parse(rawArguments);
+      if (!parsed || typeof parsed !== "object") return null;
+
+      const candidate = parsed as Record<string, unknown>;
+      const sql = typeof candidate.sql === "string" ? candidate.sql.trim() : "";
+
+      if (sql.length === 0) return null;
+
+      return {
+        sql,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private validatePublicPropertiesSql(sql: string): ValidatedPublicPropertiesSql {
+    const normalizedSql = sql.trim().replace(/\s+/g, " ");
+    const lowerSql = normalizedSql.toLowerCase();
+
+    if (normalizedSql.length === 0) {
+      throw new Error("La consulta SQL esta vacia.");
+    }
+
+    if (normalizedSql.length > MAX_AI_SQL_LENGTH) {
+      throw new Error("La consulta SQL excede el tamano permitido.");
+    }
+
+    if (!lowerSql.startsWith("select ")) {
+      throw new Error("Solo se permiten consultas SELECT.");
+    }
+
+    if (!/\bfrom\s+public_properties\b/i.test(normalizedSql)) {
+      throw new Error("La consulta debe usar exclusivamente la vista public_properties.");
+    }
+
+    if (/;|--|\/\*|\*\//.test(normalizedSql)) {
+      throw new Error("La consulta contiene comentarios o separadores no permitidos.");
+    }
+
+    if (/\bfrom\s+public_properties\s*,/i.test(normalizedSql)) {
+      throw new Error("La consulta no puede combinar public_properties con otras relaciones.");
+    }
+
+    if (/["'`]*\b(property|user|lease|payment|notification|favorite|lead|matchalert|scrapingfuente)\b["'`]*/i.test(normalizedSql)) {
+      throw new Error("La consulta intenta acceder a tablas reales no permitidas.");
+    }
+
+    const forbiddenPattern =
+      /\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|execute|call|do|set|reset|show|listen|notify|vacuum|analyze|refresh|reindex|lock|comment|copy|merge|with|union|intersect|except|join|lateral|pg_sleep|generate_series|dblink|lo_import|lo_export|information_schema|current_setting|current_user|session_user|version)\b/i;
+
+    if (forbiddenPattern.test(normalizedSql)) {
+      throw new Error("La consulta usa una instruccion o funcion no permitida.");
+    }
+
+    const relationMatches = Array.from(
+      normalizedSql.matchAll(/\bfrom\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/gi),
+    );
+
+    if (
+      relationMatches.length !== 1 ||
+      relationMatches[0]?.[1]?.toLowerCase() !== "public_properties"
+    ) {
+      throw new Error("La consulta solo puede leer desde public_properties una vez.");
+    }
+
+    return {
+      sql: normalizedSql,
+    };
+  }
+
+  private serializeQueryValue(value: unknown): unknown {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === "bigint") {
+      return value.toString();
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "object" && "toString" in value) {
+      return String(value);
+    }
+
+    return String(value);
+  }
+
+  private serializeQueryRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    return rows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [key, this.serializeQueryValue(value)]),
+      ),
+    );
+  }
+
   private async executeCreateMatchAlertTool(rawArguments: string): Promise<string> {
     const args = this.parseMatchAlertToolArgs(rawArguments);
 
@@ -661,6 +800,79 @@ class AIService {
     }
   }
 
+  private async executeQueryPublicPropertiesTool(rawArguments: string): Promise<string> {
+    const args = this.parseQueryPublicPropertiesToolArgs(rawArguments);
+
+    if (!args) {
+      return JSON.stringify({
+        ok: false,
+        error: "Argumentos invalidos para query_public_properties. Se requiere sql como texto.",
+      });
+    }
+
+    let validatedSql: ValidatedPublicPropertiesSql;
+
+    try {
+      validatedSql = this.validatePublicPropertiesSql(args.sql);
+    } catch (error: unknown) {
+      return JSON.stringify({
+        ok: false,
+        error: error instanceof Error ? error.message : "La consulta SQL no paso validacion.",
+      });
+    }
+
+    const readOnlyQuery = `
+      WITH public_properties AS (
+        SELECT
+          "id"::text AS id,
+          "title" AS title,
+          "description" AS description,
+          "price"::numeric AS price,
+          "location" AS location,
+          "city" AS city,
+          "neighborhood" AS neighborhood,
+          "rooms" AS rooms,
+          "type"::text AS type,
+          "isScraped" AS is_scraped,
+          "isFeatured" AS is_featured,
+          "createdAt" AS created_at
+        FROM "Property"
+        WHERE "status" = 'AVAILABLE'::"PropertyStatus"
+      )
+      SELECT *
+      FROM (${validatedSql.sql}) AS ai_result
+      LIMIT ${MAX_AI_SQL_ROWS}
+    `;
+
+    try {
+      const rows = await prisma.$transaction(async (transaction) => {
+        await transaction.$executeRawUnsafe("SET TRANSACTION READ ONLY");
+        await transaction.$executeRawUnsafe("SET LOCAL statement_timeout = '2500ms'");
+
+        return transaction.$queryRawUnsafe<Array<Record<string, unknown>>>(readOnlyQuery);
+      });
+
+      return JSON.stringify({
+        ok: true,
+        rowCount: rows.length,
+        maxRows: MAX_AI_SQL_ROWS,
+        sql: validatedSql.sql,
+        rows: this.serializeQueryRows(rows),
+      });
+    } catch (error: unknown) {
+      logger.error("Failed to execute AI public properties SQL query.", {
+        error: error instanceof Error ? error.message : String(error),
+        sql: validatedSql.sql,
+      });
+
+      return JSON.stringify({
+        ok: false,
+        error:
+          "No fue posible ejecutar la consulta segura. Revisa columnas, filtros y agregaciones.",
+      });
+    }
+  }
+
   private hasLikelyPhone(text: string): boolean {
     return /(?:\+?\d[\d\s-]{6,}\d)/.test(text);
   }
@@ -755,7 +967,7 @@ class AIService {
     }
 
     const systemPrompt =
-      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Usa el siguiente contexto de propiedades disponibles para responder al usuario. Se amable, conciso, usa jerga local muy sutil (parce, super) y si hay propiedades que hacen match, recomiendalas con entusiasmo. NUNCA inventes propiedades que no esten en el contexto. Si el usuario hace preguntas sobre precios especificos, ordenamiento (ej. 'la mas barata', 'la mas cara') o filtros exactos que la busqueda semantica inicial no resolvio, USA OBLIGATORIAMENTE la herramienta search_catalog para obtener datos reales de base de datos antes de responder. Si el usuario busca algo que NO esta en el contexto de propiedades disponibles, dile que los buenos arriendos vuelan rapido, y ofrecelo crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE la herramienta create_match_alert para guardarlo en el sistema. Nunca uses la herramienta sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
+      "Eres el Asesor Inmobiliario Estrella de RentVago, experto en el Valle de Aburra (Medellin, Envigado, Itagui, etc.). Se amable, conciso y usa jerga local muy sutil (parce, super). NUNCA inventes propiedades o metricas. Para preguntas exactas, filtros por presupuesto/barrio/ciudad, rankings, conteos, promedios, minimos, maximos o analitica del catalogo, USA OBLIGATORIAMENTE query_public_properties antes de responder. Esa herramienta solo permite SQL SELECT sobre la vista virtual public_properties, con columnas id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured y created_at. Ejemplo para presupuesto y barrio: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE price <= 200000 AND (neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%') ORDER BY price ASC LIMIT 5. Ejemplo para barrio con mas arriendos: SELECT COALESCE(neighborhood, 'Sin barrio') AS neighborhood, COUNT(*) AS total FROM public_properties GROUP BY COALESCE(neighborhood, 'Sin barrio') ORDER BY total DESC LIMIT 5. Usa search_catalog solo para busquedas simples por ciudad/precio si no necesitas SQL agregado. Usa el contexto semantico solo como apoyo conversacional, no como fuente total de verdad. Si el usuario busca algo que NO existe en los resultados reales, dile que los buenos arriendos vuelan rapido y ofrece crear una 'Alerta de Match'. Pidele su nombre y WhatsApp (o telefono). CUANDO te de esos datos, usa OBLIGATORIAMENTE create_match_alert para guardarlo en el sistema. Nunca uses create_match_alert sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
 
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -782,7 +994,7 @@ class AIService {
           model: CHAT_MODEL,
           temperature: 0.35,
           messages,
-          tools: [MATCH_ALERT_TOOL, SEARCH_CATALOG_TOOL],
+          tools: [MATCH_ALERT_TOOL, SEARCH_CATALOG_TOOL, QUERY_PUBLIC_PROPERTIES_TOOL],
           tool_choice: round === 0 ? toolChoice : "auto",
         });
 
@@ -816,7 +1028,8 @@ class AIService {
 
           if (
             toolCall.function.name !== CREATE_MATCH_ALERT_TOOL_NAME &&
-            toolCall.function.name !== SEARCH_CATALOG_TOOL_NAME
+            toolCall.function.name !== SEARCH_CATALOG_TOOL_NAME &&
+            toolCall.function.name !== QUERY_PUBLIC_PROPERTIES_TOOL_NAME
           ) {
             messages.push({
               role: "tool",
@@ -832,7 +1045,9 @@ class AIService {
           const toolResult =
             toolCall.function.name === CREATE_MATCH_ALERT_TOOL_NAME
               ? await this.executeCreateMatchAlertTool(toolCall.function.arguments)
-              : await this.executeSearchCatalogTool(toolCall.function.arguments);
+              : toolCall.function.name === SEARCH_CATALOG_TOOL_NAME
+                ? await this.executeSearchCatalogTool(toolCall.function.arguments)
+                : await this.executeQueryPublicPropertiesTool(toolCall.function.arguments);
 
           messages.push({
             role: "tool",
