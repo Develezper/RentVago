@@ -4,6 +4,8 @@ import { propertiesUseCases } from "@/modules/properties/application/property.us
 import { notFound } from "next/navigation";
 import { EditLeaseForm } from "./edit-lease-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function EditLeasePage({
   params,
 }: {

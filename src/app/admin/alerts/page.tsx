@@ -1,5 +1,7 @@
 import { adminUseCases } from "@/modules/admin/application/admin.use-cases";
 
+export const dynamic = "force-dynamic";
+
 const statusLabels: Record<string, string> = {
   PENDING: "Pendiente",
   CONTACTED: "Contactado",

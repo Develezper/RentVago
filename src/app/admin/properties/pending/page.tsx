@@ -1,6 +1,8 @@
 import { propertiesUseCases } from "@/modules/properties/application/property.use-cases";
 import { PendingPropertiesClient } from "./pending-properties-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function PendingAdminPropertiesPage() {
   const allProperties = await propertiesUseCases.listAdminProperties();
   const pendingProperties = allProperties
