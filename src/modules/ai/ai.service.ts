@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { resolveCityByInput } from "@/modules/properties/domain/geography";
@@ -167,6 +167,20 @@ const toPriceString = (price: PropertyEmbeddingPrice): string => {
   return price.toString();
 };
 
+const formatCopPrice = (price: string): string => {
+  const parsed = Number(price);
+
+  if (!Number.isFinite(parsed)) {
+    return `${price} COP`;
+  }
+
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(parsed);
+};
+
 const normalizeEmbedding = (embedding: number[]): number[] =>
   embedding.map((value) => (Number.isFinite(value) ? value : 0));
 
@@ -270,19 +284,33 @@ class AIService {
       return "Por ahora no encontre propiedades que hagan match directo con tu busqueda. Si quieres, te ayudo a ajustar presupuesto, zona o habitaciones, o puedo crear una alerta para avisarte apenas salga algo alineado.";
     }
 
-    const suggestions = properties
+    const uniqueProperties = Array.from(
+      new Map(
+        properties.map((property) => [
+          `${property.title.toLowerCase()}-${property.price}`,
+          property,
+        ]),
+      ).values(),
+    );
+
+    const suggestions = uniqueProperties
+      .sort((first, second) => Number(first.price) - Number(second.price))
       .slice(0, 3)
       .map(
         (property) =>
-          `${property.title} (${property.city ?? "Sin ciudad"}) por ${property.price} COP`,
+          `${property.title} (${property.city ?? "Sin ciudad"}) por ${formatCopPrice(property.price)}`,
       )
       .join("; ");
 
     return `Te recomiendo estas opciones que hacen buen match: ${suggestions}. Si quieres, te filtro mas fino por barrio, habitaciones o presupuesto.`;
   }
 
-  private buildUnavailableAIReply(): string {
-    return "El asesor IA esta temporalmente no disponible por limite de uso del proveedor. Puedes intentar de nuevo en unos minutos; mientras tanto, revisa las propiedades sugeridas que te muestro abajo.";
+  private buildUnavailableAIReply(properties: SimilarProperty[]): string {
+    if (properties.length > 0) {
+      return this.buildFallbackChatReply(properties);
+    }
+
+    return "El asesor IA esta temporalmente no disponible por limite de uso del proveedor. Puedes intentar de nuevo en unos minutos.";
   }
 
   private getErrorMessage(error: unknown): string {
@@ -308,48 +336,90 @@ class AIService {
     );
   }
 
+  private extractKeywordSearchTerms(userQuery: string): string[] {
+    const stopwords = new Set([
+      "algo",
+      "apartamento",
+      "apartamentos",
+      "apartaestudio",
+      "apto",
+      "arriendo",
+      "barata",
+      "barato",
+      "casa",
+      "casas",
+      "cual",
+      "cuales",
+      "menos",
+      "para",
+      "por",
+      "propiedad",
+      "propiedades",
+      "que",
+      "serviria",
+      "sirve",
+      "tenemos",
+    ]);
+
+    return Array.from(
+      new Set(
+        userQuery
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .split(/[^a-z0-9]+/)
+          .map((term) => term.trim())
+          .filter((term) => term.length >= 3 && !stopwords.has(term) && !/^\d+$/.test(term)),
+      ),
+    ).slice(0, 6);
+  }
+
   private async searchByKeywordFallback(
     userQuery: string,
     limit: number,
   ): Promise<SimilarProperty[]> {
     const normalizedQuery = userQuery.trim();
     if (normalizedQuery.length === 0) return [];
+    const terms = this.extractKeywordSearchTerms(normalizedQuery);
+    const searchTerms = terms.length > 0 ? terms : [normalizedQuery];
 
-    type FallbackRow = {
-      id: string;
-      title: string;
-      description: string;
-      price: string;
-      city: string | null;
-      neighborhood: string | null;
-      rooms: number | null;
-      propertyType: string;
-    };
-
-    const rows = await prisma.$queryRaw<FallbackRow[]>`
-      SELECT
-        "id",
-        "title",
-        "description",
-        "price"::text AS "price",
-        "city",
-        "neighborhood",
-        "rooms",
-        "type"::text AS "propertyType"
-      FROM "Property"
-      WHERE "status" = 'AVAILABLE'::"PropertyStatus"
-        AND (
-          "title" ILIKE '%' || ${normalizedQuery} || '%'
-          OR "description" ILIKE '%' || ${normalizedQuery} || '%'
-          OR "city" ILIKE '%' || ${normalizedQuery} || '%'
-          OR "neighborhood" ILIKE '%' || ${normalizedQuery} || '%'
-        )
-      ORDER BY "createdAt" DESC
-      LIMIT ${limit}
-    `;
+    const rows = await prisma.property.findMany({
+      where: {
+        status: "AVAILABLE",
+        price: {
+          gte: MIN_AI_PROPERTY_PRICE_COP,
+        },
+        OR: searchTerms.flatMap((term) => [
+          { title: { contains: term, mode: "insensitive" } },
+          { description: { contains: term, mode: "insensitive" } },
+          { location: { contains: term, mode: "insensitive" } },
+          { city: { contains: term, mode: "insensitive" } },
+          { neighborhood: { contains: term, mode: "insensitive" } },
+        ]),
+      },
+      orderBy: [{ price: "asc" }, { createdAt: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        city: true,
+        neighborhood: true,
+        rooms: true,
+        type: true,
+      },
+    });
 
     return rows.map((row) => ({
-      ...row,
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      price: row.price.toString(),
+      city: row.city,
+      neighborhood: row.neighborhood,
+      rooms: row.rooms,
+      propertyType: row.type,
       similarity: 0,
     }));
   }
@@ -394,6 +464,7 @@ class AIService {
           (1 - ("embedding" <=> ${queryVector}::vector))::double precision AS "similarity"
         FROM "Property"
         WHERE "status" = 'AVAILABLE'::"PropertyStatus"
+          AND "price" >= ${MIN_AI_PROPERTY_PRICE_COP}
           AND "embedding" IS NOT NULL
           AND vector_dims("embedding") = ${embeddingDimensions}
         ORDER BY "embedding" <=> ${queryVector}::vector ASC
@@ -404,7 +475,16 @@ class AIService {
         return this.searchByKeywordFallback(normalizedQuery, safeLimit);
       }
 
-      return rows;
+      const keywordRows = await this.searchByKeywordFallback(normalizedQuery, safeLimit);
+      const mergedRows = new Map<string, SimilarProperty>();
+
+      for (const row of [...keywordRows, ...rows]) {
+        if (!mergedRows.has(row.id)) {
+          mergedRows.set(row.id, row);
+        }
+      }
+
+      return Array.from(mergedRows.values()).slice(0, safeLimit);
     } catch (error: unknown) {
       const errorMessage = this.getErrorMessage(error);
 
@@ -1010,7 +1090,7 @@ class AIService {
     }
 
     const systemPrompt =
-      "Eres el Asesor Inmobiliario de RentVago, experto en arriendos del Valle de Aburra (Medellin, Envigado, Itagui, etc.). Habla en espanol colombiano neutro, amable y directo. NO uses tono paisa ni muletillas como 'parce', 'upa', 'sisas', 'de una' o 'super'. NUNCA inventes propiedades o metricas. Para preguntas exactas, filtros por presupuesto/barrio/ciudad, rankings, conteos, promedios, minimos, maximos o analitica del catalogo, USA OBLIGATORIAMENTE query_public_properties antes de responder. Esa herramienta solo permite SQL SELECT sobre la vista virtual public_properties, con columnas id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured y created_at. En RentVago, palabras como casa, apartamento, apartaestudio, apto, inmueble, hogar, arriendo o propiedad significan propiedad disponible en general: NO filtres por la columna type aunque el usuario diga casa o apartamento, salvo que el usuario pida explicitamente comparar tipos. Si el usuario corrige o continua con frases como 'entonces cuales me servirian', 'si tenemos', 'revisa en la base de datos' o 'de menos de X', usa el historial reciente para completar barrio, presupuesto y criterio. Ejemplo para 'cual es la casa mas barata': SELECT id, title, price, city, neighborhood, rooms FROM public_properties ORDER BY price ASC LIMIT 5. Ejemplo para presupuesto y barrio: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE price <= 200000 AND (neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%') ORDER BY price ASC LIMIT 5. Ejemplo para barrio con mas arriendos: SELECT COALESCE(neighborhood, 'Sin barrio') AS neighborhood, COUNT(*) AS total FROM public_properties GROUP BY COALESCE(neighborhood, 'Sin barrio') ORDER BY total DESC LIMIT 5. Usa search_catalog solo para busquedas simples por ciudad/precio si no necesitas SQL agregado. Usa el contexto semantico solo como apoyo conversacional, no como fuente total de verdad. Si no existen resultados reales, dilo con claridad y ofrece crear una 'Alerta de Match'. Pide nombre y WhatsApp o telefono. CUANDO te de esos datos, usa OBLIGATORIAMENTE create_match_alert para guardarlo en el sistema. Nunca uses create_match_alert sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
+      "Eres el Asesor Inmobiliario de RentVago, experto en arriendos del Valle de Aburra (Medellin, Envigado, Itagui, etc.). Habla en espanol colombiano neutro, amable y directo. NO uses tono paisa ni muletillas como 'parce', 'upa', 'sisas', 'de una' o 'super'. NUNCA inventes propiedades o metricas. No muestres IDs internos al usuario; usa los IDs solo para enlazar tarjetas del sistema si aparecen como contexto. Para preguntas exactas, filtros por presupuesto/barrio/ciudad, rankings, conteos, promedios, minimos, maximos o analitica del catalogo, USA OBLIGATORIAMENTE query_public_properties antes de responder. Esa herramienta solo permite SQL SELECT sobre la vista virtual public_properties, con columnas id, title, description, price, location, city, neighborhood, rooms, type, is_scraped, is_featured y created_at. La vista ya excluye precios irreales menores a 100000 COP. En RentVago, palabras como casa, apartamento, apartaestudio, apto, inmueble, hogar, arriendo o propiedad significan propiedad disponible en general: NO filtres por la columna type aunque el usuario diga casa o apartamento, salvo que el usuario pida explicitamente comparar tipos. Si el usuario corrige o continua con frases como 'entonces cuales me servirian', 'si tenemos', 'revisa en la base de datos' o 'de menos de X', usa el historial reciente para completar barrio, presupuesto y criterio. Si una busqueda con barrio/zona y presupuesto no devuelve resultados, NO cambies de barrio de inmediato: primero consulta las opciones mas baratas manteniendo el mismo barrio/zona y explica cuanto se alejan del presupuesto. Solo relaja la zona si el usuario lo pide. Cuando haya filas repetidas o titulos iguales, presenta solo una vez cada opcion en la respuesta final. Ejemplo para 'cual es la casa mas barata': SELECT id, title, price, city, neighborhood, rooms FROM public_properties ORDER BY price ASC LIMIT 8. Ejemplo para presupuesto y barrio: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE price <= 200000 AND (neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%' OR title ILIKE '%robledo%') ORDER BY price ASC LIMIT 8. Si no hay resultados para ese presupuesto en Robledo, consulta despues: SELECT id, title, price, city, neighborhood, rooms FROM public_properties WHERE neighborhood ILIKE '%robledo%' OR location ILIKE '%robledo%' OR title ILIKE '%robledo%' ORDER BY price ASC LIMIT 8. Ejemplo para barrio con mas arriendos: SELECT COALESCE(neighborhood, 'Sin barrio') AS neighborhood, COUNT(*) AS total FROM public_properties GROUP BY COALESCE(neighborhood, 'Sin barrio') ORDER BY total DESC LIMIT 5. Usa search_catalog solo para busquedas simples por ciudad/precio si no necesitas SQL agregado. Usa el contexto semantico solo como apoyo conversacional, no como fuente total de verdad. Si no existen resultados reales, dilo con claridad y ofrece crear una 'Alerta de Match'. Pide nombre y WhatsApp o telefono. CUANDO te de esos datos, usa OBLIGATORIAMENTE create_match_alert para guardarlo en el sistema. Nunca uses create_match_alert sin tener el telefono. Si en el mensaje actual ya tienes nombre, telefono y criterio, ejecuta de una vez create_match_alert y luego confirma que quedo guardada.";
 
     try {
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -1116,7 +1196,9 @@ class AIService {
 
       if (this.isQuotaOrRateLimitError(streamResult.error)) {
         return {
-          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
+          replyStream: this.createTextStreamFromString(
+            this.buildUnavailableAIReply(contextProperties),
+          ),
           contextProperties,
         };
       }
@@ -1134,7 +1216,9 @@ class AIService {
 
       if (this.isQuotaOrRateLimitError(error)) {
         return {
-          replyStream: this.createTextStreamFromString(this.buildUnavailableAIReply()),
+          replyStream: this.createTextStreamFromString(
+            this.buildUnavailableAIReply(contextProperties),
+          ),
           contextProperties,
         };
       }
