@@ -79,6 +79,7 @@ model Property {
   favorites     Favorite[]
   leads         Lead[]
   searchVector  Unsupported("tsvector")? @default(dbgenerated()) @map("search_vector")
+  embedding     Unsupported("vector(1536)")?
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
 
@@ -187,6 +188,19 @@ model Lead {
   @@index([status])
   @@index([createdAt])
   @@index([propertyId, createdAt])
+}
+
+model MatchAlert {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  phone     String
+  criteria  String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([phone])
 }
 
 model ScrapingFuente {

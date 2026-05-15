@@ -1,6 +1,7 @@
 import { PropertyStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { aiService } from "@/modules/ai/ai.service";
 import { getCityBySlug, resolveActiveCityByInput } from "@/modules/properties/domain/geography";
 import type { PropertiesRepository } from "@/modules/properties/domain/property.repository";
 import type {
@@ -353,7 +354,7 @@ class PrismaPropertiesRepository implements PropertiesRepository {
   }
 
   async createAdminProperty(input: AdminPropertyCreateInput) {
-    return prisma.property.create({
+    const created = await prisma.property.create({
       data: {
         title: input.title,
         description: input.description,
@@ -365,6 +366,18 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         ownerId: input.ownerId ?? null,
       },
     });
+
+    await aiService.generateAndPersistPropertyEmbedding({
+      id: created.id,
+      title: created.title,
+      description: created.description,
+      price: created.price,
+      city: created.city,
+      neighborhood: created.neighborhood,
+      rooms: created.rooms,
+    });
+
+    return created;
   }
 
   async createDirectProperty(data: CreatePropertyDTO, ownerId: string): Promise<{ id: string }> {
@@ -391,14 +404,30 @@ class PrismaPropertiesRepository implements PropertiesRepository {
       },
       select: {
         id: true,
+        title: true,
+        description: true,
+        price: true,
+        city: true,
+        neighborhood: true,
+        rooms: true,
       },
+    });
+
+    await aiService.generateAndPersistPropertyEmbedding({
+      id: created.id,
+      title: created.title,
+      description: created.description,
+      price: created.price,
+      city: created.city,
+      neighborhood: created.neighborhood,
+      rooms: created.rooms,
     });
 
     return { id: created.id };
   }
 
   async updateAdminProperty(id: string, input: AdminPropertyUpdateInput) {
-    return prisma.property.update({
+    const updated = await prisma.property.update({
       where: { id },
       data: {
         title: input.title,
@@ -411,6 +440,18 @@ class PrismaPropertiesRepository implements PropertiesRepository {
         price: input.price !== undefined ? input.price : undefined,
       },
     });
+
+    await aiService.generateAndPersistPropertyEmbedding({
+      id: updated.id,
+      title: updated.title,
+      description: updated.description,
+      price: updated.price,
+      city: updated.city,
+      neighborhood: updated.neighborhood,
+      rooms: updated.rooms,
+    });
+
+    return updated;
   }
 
   async markPropertyAsFeatured(id: string, featuredUntil: Date) {

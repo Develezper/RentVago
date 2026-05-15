@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { unstable_cache } from "next/cache";
 import { ArrowRight, LogIn, Sparkles } from "lucide-react";
+import { AIChat } from "@/components/ui/ai-chat";
 import { PropertyCard } from "@/components/ui/property-card";
 import { WelcomeCityToast } from "@/components/ui/welcome-city-toast";
 import { ACCESS_COOKIE_NAME } from "@/lib/auth-cookies";
@@ -177,6 +178,8 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      <AIChat />
 
     </main>
   );

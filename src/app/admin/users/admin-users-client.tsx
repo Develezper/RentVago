@@ -80,8 +80,8 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
             </thead>
             <tbody className="divide-y divide-gray-800">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-900/50 transition-colors group">
-                  <td className="px-8 py-6 font-semibold text-white">
+                <tr key={user.id} className="hover:bg-green-500/5 transition-colors group">
+                  <td className="px-8 py-6 font-semibold text-gray-200">
                     {user.name ?? (
                       <span className="text-gray-600 italic font-normal">Sin nombre</span>
                     )}
@@ -121,7 +121,7 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
                       <button
                         onClick={() => toggleRole(user)}
                         disabled={loading === user.id}
-                        className="text-xs font-bold uppercase tracking-wider bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition-all border border-gray-700 disabled:opacity-50"
+                        className="text-xs font-bold uppercase tracking-wider bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 px-4 py-2 rounded-lg transition-all border border-gray-700 disabled:opacity-50"
                       >
                         {loading === user.id ? "..." : "Cambiar rol"}
                       </button>
@@ -130,8 +130,8 @@ export function AdminUsersClient({ users }: { users: UserRow[] }) {
                         disabled={loading === user.id}
                         className={`text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-all border disabled:opacity-50 ${
                           user.isActive
-                            ? "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500 hover:text-white hover:border-red-500"
-                            : "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500 hover:text-white hover:border-green-500"
+                            ? "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 hover:text-red-200 hover:border-red-500/40"
+                            : "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20 hover:text-green-200 hover:border-green-500/40"
                         }`}
                       >
                         {loading === user.id

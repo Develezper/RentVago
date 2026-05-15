@@ -2,6 +2,7 @@ import type { Role } from "@/generated/prisma/enums";
 import type {
   AdminBusinessStatsSnapshot,
   AdminDashboardMetrics,
+  AdminMatchAlert,
   AdminStats,
   AdminUser,
   LeaseCreateInput,
@@ -19,6 +20,7 @@ export interface AdminRepository {
   getBusinessStatsSnapshot(): Promise<AdminBusinessStatsSnapshot>;
 
   getAllUsers(): Promise<AdminUser[]>;
+  getAllMatchAlerts(): Promise<AdminMatchAlert[]>;
   updateUserRole(userId: string, role: Role): Promise<void>;
   toggleUserStatus(userId: string, isActive: boolean): Promise<void>;
 

@@ -1,6 +1,7 @@
 import { SearchLoadingSkeleton } from "./search-page.components";
 import { headers } from "next/headers";
 import { Suspense } from "react";
+import { AIChat } from "@/components/ui/ai-chat";
 import { resolveAuthenticatedUserFromHeaders } from "@/lib/api-auth";
 import { favoritesUseCases } from "@/modules/properties/application/favorite.use-cases";
 import {
@@ -124,19 +125,22 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   }));
 
   return (
-    <Suspense fallback={<SearchLoadingSkeleton />}>
-      <SearchPageClient
-        key={queryString || "default-search"}
-        initialFilters={initialState.filters}
-        savedSearchFilters={savedSearchFilters}
-        initialProperties={initialProperties}
-        initialFavoritePropertyIds={favoritePropertyIds}
-        currentPage={results.meta.page}
-        currentPageSize={currentPageSize}
-        meta={results.meta}
-        viewerRole={role}
-        pdfDownloadHref={buildPdfDownloadHref(initialState.filters)}
-      />
-    </Suspense>
+    <>
+      <Suspense fallback={<SearchLoadingSkeleton />}>
+        <SearchPageClient
+          key={queryString || "default-search"}
+          initialFilters={initialState.filters}
+          savedSearchFilters={savedSearchFilters}
+          initialProperties={initialProperties}
+          initialFavoritePropertyIds={favoritePropertyIds}
+          currentPage={results.meta.page}
+          currentPageSize={currentPageSize}
+          meta={results.meta}
+          viewerRole={role}
+          pdfDownloadHref={buildPdfDownloadHref(initialState.filters)}
+        />
+      </Suspense>
+      <AIChat />
+    </>
   );
 }
