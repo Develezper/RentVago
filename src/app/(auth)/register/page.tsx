@@ -209,7 +209,7 @@ function RegisterPageContent() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center gap-2 py-4 px-4 bg-green-500 text-black text-sm font-extrabold rounded-2xl hover:bg-green-400 transition-all active:scale-[0.98] disabled:opacity-50 shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)] mt-3"
+              className="w-full flex justify-center items-center gap-2 py-4 px-4 bg-green-500 text-black text-sm font-extrabold rounded-2xl hover:bg-green-400 transition-all active:scale-[0.98] disabled:opacity-50 shadow-[0_0_15px_rgba(233,82,22,0.3)] hover:shadow-[0_0_25px_rgba(233,82,22,0.42)] mt-3"
             >
               {isLoading ? (
                 "Creando cuenta..."

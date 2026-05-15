@@ -144,7 +144,7 @@ export function MyPropertiesPageClient({ properties }: MyPropertiesPageClientPro
 
       {selectedForFeature ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4">
-          <div className="w-full max-w-lg rounded-3xl border border-yellow-400/40 bg-linear-to-b from-zinc-950 via-black to-zinc-950 p-6 shadow-[0_0_40px_rgba(234,179,8,0.2),0_0_70px_rgba(34,197,94,0.18)]">
+          <div className="w-full max-w-lg rounded-3xl border border-yellow-400/40 bg-linear-to-b from-zinc-950 via-black to-zinc-950 p-6 shadow-[0_0_40px_rgba(255,195,0,0.2),0_0_70px_rgba(233,82,22,0.18)]">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">
               Premium RentVago
             </p>

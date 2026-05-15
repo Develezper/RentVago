@@ -14,7 +14,7 @@ import {
   Cell,
 } from "recharts";
 
-const COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444"];
+const COLORS = ["#e95216", "#ffc300", "#94856b", "#6c6760"];
 
 interface ChartDataItem {
   name: string;
@@ -86,7 +86,7 @@ export default function DashboardCharts({
                 itemStyle={{ color: barTooltipColor, fontSize: "12px" }}
                 labelStyle={{ color: barTooltipColor }}
               />
-              <Bar dataKey="value" fill="#22c55e" radius={[6, 6, 0, 0]} barSize={45} />
+              <Bar dataKey="value" fill="var(--color-green-500)" radius={[6, 6, 0, 0]} barSize={45} />
             </BarChart>
           </ResponsiveContainer>
         </div>

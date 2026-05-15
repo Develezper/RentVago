@@ -20,8 +20,8 @@ export default function OpenGraphImage(): ImageResponse {
           justifyContent: "center",
           padding: "72px",
           background:
-            "radial-gradient(circle at 90% 10%, #14532d 0%, transparent 40%), linear-gradient(135deg, #020617 0%, #111827 55%, #052e16 100%)",
-          color: "#f3f4f6",
+            "radial-gradient(circle at 90% 10%, rgba(233,82,22,0.24) 0%, transparent 40%), linear-gradient(135deg, #131211 0%, #363330 62%, #1b1a18 100%)",
+          color: "#fff9e5",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
         }}
       >
@@ -31,7 +31,7 @@ export default function OpenGraphImage(): ImageResponse {
             fontWeight: 800,
             lineHeight: 1,
             letterSpacing: -1,
-            color: "#22c55e",
+            color: "#e95216",
           }}
         >
           RentVago
@@ -42,7 +42,7 @@ export default function OpenGraphImage(): ImageResponse {
             height: 8,
             width: 390,
             borderRadius: 999,
-            background: "linear-gradient(90deg, #22c55e 0%, #86efac 100%)",
+            background: "linear-gradient(90deg, #e95216 0%, #ee7444 100%)",
           }}
         />
         <div
@@ -60,7 +60,7 @@ export default function OpenGraphImage(): ImageResponse {
           style={{
             marginTop: 22,
             fontSize: 30,
-            color: "#d1d5db",
+            color: "#e7e6e4",
           }}
         >
           Catálogo, alertas y gestión segura para equipos inmobiliarios.

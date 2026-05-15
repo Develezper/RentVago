@@ -130,6 +130,19 @@ const getErrorMessageFromResponse = async (response: Response): Promise<string> 
   return "No fue posible responder tu consulta ahora.";
 };
 
+const buildChatHistoryPayload = (messages: ChatMessage[]): Array<{
+  role: MessageRole;
+  content: string;
+}> =>
+  messages
+    .filter((message) => message.id !== INITIAL_ASSISTANT_MESSAGE.id)
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim(),
+    }))
+    .filter((message) => message.content.length > 0)
+    .slice(-8);
+
 export function AIChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -156,6 +169,7 @@ export function AIChat() {
       role: "user",
       content: normalizedMessage,
     };
+    const history = buildChatHistoryPayload(messages);
 
     setMessages((previous) => [...previous, userMessage]);
     setInput("");
@@ -169,7 +183,7 @@ export function AIChat() {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: normalizedMessage }),
+        body: JSON.stringify({ message: normalizedMessage, history }),
       });
 
       if (!response.ok) {
@@ -296,8 +310,8 @@ export function AIChat() {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-50">
       {isOpen ? (
-        <section className="pointer-events-auto w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-3xl border border-green-500/30 bg-black/95 shadow-[0_25px_80px_rgba(34,197,94,0.22)] backdrop-blur md:w-104">
-          <header className="relative border-b border-gray-800/90 bg-gray-950 px-4 py-3">
+        <section className="chat-panel pointer-events-auto w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-3xl border border-green-500/30 bg-black/95 shadow-[0_25px_80px_rgba(233,82,22,0.18)] backdrop-blur md:w-104">
+          <header className="chat-header relative border-b border-gray-800/90 bg-gray-950 px-4 py-3">
             <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-green-400/60 to-transparent" />
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -320,7 +334,7 @@ export function AIChat() {
             </div>
           </header>
 
-          <div className="max-h-104 space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.10),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_40%)] px-3 py-4">
+          <div className="chat-scroll-area max-h-104 space-y-3 overflow-y-auto px-3 py-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -330,7 +344,7 @@ export function AIChat() {
                   className={`max-w-[85%] rounded-2xl border px-3 py-2 text-sm leading-relaxed ${
                     message.role === "user"
                       ? "border-green-400/40 bg-green-500 text-black"
-                      : "border-gray-700 bg-gray-900/95 text-gray-100"
+                      : "chat-assistant-message border-gray-700 bg-gray-900/95 text-gray-100"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
@@ -338,7 +352,7 @@ export function AIChat() {
                   {message.role === "assistant" &&
                   message.contextProperties &&
                   message.contextProperties.length > 0 ? (
-                    <div className="mt-3 space-y-2 rounded-xl border border-gray-700 bg-black/60 p-2">
+                    <div className="chat-context-panel mt-3 space-y-2 rounded-xl border border-gray-700 bg-black/60 p-2">
                       <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-green-400">
                         Propiedades sugeridas
                       </p>
@@ -368,7 +382,7 @@ export function AIChat() {
 
             {isLoading ? (
               <div className="flex justify-start">
-                <div className="rounded-2xl border border-gray-700 bg-gray-900/95 px-3 py-2 text-sm text-gray-300">
+                <div className="chat-assistant-message rounded-2xl border border-gray-700 bg-gray-900/95 px-3 py-2 text-sm text-gray-300">
                   El asesor esta buscando opciones para ti...
                 </div>
               </div>
@@ -377,12 +391,12 @@ export function AIChat() {
           </div>
 
           <form onSubmit={sendMessage} className="border-t border-gray-800 bg-black p-3">
-            <div className="flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-950 px-2 py-2 focus-within:border-green-400/60">
+            <div className="chat-input-shell flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-950 px-2 py-2 focus-within:border-green-400/60">
               <input
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ej: Busco apartaestudio en Envigado por 1.5M"
-                className="w-full bg-transparent px-2 text-sm text-white outline-none placeholder:text-gray-500"
+                className="chat-input w-full bg-transparent px-2 text-sm outline-none"
                 disabled={isLoading}
                 maxLength={500}
               />
@@ -402,7 +416,7 @@ export function AIChat() {
       <button
         type="button"
         onClick={() => setIsOpen((previous) => !previous)}
-        className="pointer-events-auto mt-3 inline-flex h-14 w-14 items-center justify-center rounded-full border border-green-400/40 bg-green-500 text-black shadow-[0_12px_35px_rgba(34,197,94,0.35)] transition hover:-translate-y-0.5 hover:bg-green-400"
+        className="pointer-events-auto mt-3 inline-flex h-14 w-14 items-center justify-center rounded-full border border-green-400/40 bg-green-500 text-black shadow-[0_12px_35px_rgba(233,82,22,0.35)] transition hover:-translate-y-0.5 hover:bg-green-400"
         aria-label={isOpen ? "Cerrar chat de asesor" : "Abrir chat de asesor"}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}

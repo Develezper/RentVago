@@ -47,7 +47,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
         Volver a Mis Propiedades
       </Link>
 
-      <section className="rounded-3xl border border-yellow-400/40 bg-linear-to-b from-zinc-950 via-black to-zinc-950 p-6 shadow-[0_0_40px_rgba(234,179,8,0.2),0_0_60px_rgba(34,197,94,0.18)] sm:p-8">
+      <section className="rounded-3xl border border-yellow-400/40 bg-linear-to-b from-zinc-950 via-black to-zinc-950 p-6 shadow-[0_0_40px_rgba(255,195,0,0.2),0_0_60px_rgba(233,82,22,0.18)] sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-300">
           Checkout Premium
         </p>
