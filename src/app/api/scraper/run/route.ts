@@ -1,15 +1,16 @@
 import {
-  authorizationErrorResponse,
   AuthorizationError,
+  authorizationErrorResponse,
   requireAuthenticatedUser,
   requireRole,
 } from "@/lib/api-auth";
 import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
+import { ScraperPlatform } from "@/generated/prisma/enums";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 120;
 
 const scrapedPropertySchema = z
   .object({
@@ -26,10 +27,18 @@ const scrapedPropertySchema = z
   })
   .strict();
 
+const PLATFORM_VALUES = [
+  ScraperPlatform.FACEBOOK,
+  ScraperPlatform.MERCADOLIBRE,
+  ScraperPlatform.AIRBNB,
+  ScraperPlatform.BOOKING,
+] as const;
+
 const runSchema = z
   .object({
-    sourceName: z.literal("Facebook"),
-    city: z.string().trim().min(1, "La ciudad es obligatoria."),
+    platform: z.enum(PLATFORM_VALUES).default(ScraperPlatform.FACEBOOK),
+    // "query" is the city/location for all platforms
+    query: z.string().trim().min(1, "La ciudad o consulta es obligatoria."),
     limit: z.coerce
       .number()
       .int("El límite debe ser un número entero.")
@@ -55,10 +64,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const payload = runSchema.parse(body);
+
     const scrapedData =
       payload.properties && !payload.preview
         ? payload.properties
-        : await scraperUseCases.previewFacebookScraping(payload.city, payload.limit);
+        : await scraperUseCases.previewScrapingForPlatform(
+            payload.platform,
+            payload.query,
+            payload.limit,
+          );
+
     const saveResult = payload.preview
       ? { saved: 0, discarded: 0 }
       : await scraperUseCases.saveScrapedProperties(scrapedData);
@@ -66,8 +81,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         data: {
-          sourceName: payload.sourceName,
-          city: payload.city,
+          platform: payload.platform,
+          query: payload.query,
           limit: payload.limit,
           preview: payload.preview,
           fetched: scrapedData.length,

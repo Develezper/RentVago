@@ -5,16 +5,25 @@ import {
   requireRole,
 } from "@/lib/api-auth";
 import { scraperUseCases } from "@/modules/admin/application/scraper.use-cases";
+import { ScraperPlatform } from "@/generated/prisma/enums";
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
 export const runtime = "nodejs";
+
+const PLATFORM_VALUES = [
+  ScraperPlatform.FACEBOOK,
+  ScraperPlatform.MERCADOLIBRE,
+  ScraperPlatform.AIRBNB,
+  ScraperPlatform.BOOKING,
+] as const;
 
 const fuenteCreateSchema = z
   .object({
     nombre: z.string().trim().min(1).max(200),
     url: z.string().trim().min(1).max(120),
     activo: z.boolean().default(true),
+    plataforma: z.enum(PLATFORM_VALUES).default(ScraperPlatform.FACEBOOK),
   })
   .strict();
 

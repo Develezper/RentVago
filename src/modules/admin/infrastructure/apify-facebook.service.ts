@@ -1,4 +1,15 @@
 import type { ScrapedPropertyInput } from "@/modules/admin/domain/admin.types";
+import {
+  clampLimit,
+  collectImageUrls,
+  getApifyApiToken,
+  getFirstNonEmptyString,
+  getFirstNonEmptyText,
+  getFirstPositiveInteger,
+  isJsonObject,
+  parsePriceAmount,
+} from "@/modules/admin/infrastructure/apify-shared";
+
 const APIFY_FACEBOOK_SCRAPER_ENDPOINT =
   "https://api.apify.com/v2/acts/apify~facebook-marketplace-scraper/run-sync-get-dataset-items";
 const DEFAULT_APIFY_RESULTS_LIMIT = 10;
@@ -8,71 +19,6 @@ const APIFY_REQUEST_TIMEOUT_MS = 90_000;
 interface ApifyFacebookItem {
   [key: string]: unknown;
 }
-
-type JsonObject = Record<string, unknown>;
-
-const isJsonObject = (value: unknown): value is JsonObject => {
-  return typeof value === "object" && value !== null;
-};
-
-const getNestedValue = (source: unknown, path: string): unknown => {
-  if (!isJsonObject(source)) {
-    return undefined;
-  }
-
-  const directValue = source[path];
-  if (directValue !== undefined) {
-    return directValue;
-  }
-
-  return path.split(".").reduce<unknown>((current, segment) => {
-    if (!isJsonObject(current)) {
-      return undefined;
-    }
-
-    return current[segment];
-  }, source);
-};
-
-const getFirstNonEmptyString = (source: unknown, paths: string[]): string => {
-  for (const path of paths) {
-    const value = getNestedValue(source, path);
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
-  return "";
-};
-
-const getFirstNonEmptyText = (source: unknown, paths: string[]): string => {
-  for (const path of paths) {
-    const value = getNestedValue(source, path);
-
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-
-    if (!isJsonObject(value)) {
-      continue;
-    }
-
-    const nestedText = getFirstNonEmptyString(value, [
-      "text",
-      "description",
-      "value",
-      "content",
-      "message",
-      "body",
-    ]);
-
-    if (nestedText.length > 0) {
-      return nestedText;
-    }
-  }
-
-  return "";
-};
 
 const cleanDescription = (value: string): string => {
   const withoutHiddenMarkers = value
@@ -106,163 +52,60 @@ const cleanDescription = (value: string): string => {
     .trim();
 };
 
-const isValidHttpUrl = (value: string): boolean => {
-  return /^https?:\/\//i.test(value);
-};
+const FB_IMAGE_COLLECTION_PATHS = [
+  "listingPhotos",
+  "listingPhotos.nodes",
+  "listingPhotos.edges",
+  "listing_photos",
+  "listing_photos.nodes",
+  "listing_photos.edges",
+  "listing_media",
+  "listingMedia",
+  "all_photos",
+  "all_photos.nodes",
+  "allPhotos",
+  "allPhotos.nodes",
+  "photos",
+  "photo_urls",
+  "photoUrls",
+  "photo_gallery",
+  "photoGallery",
+  "gallery",
+  "images",
+  "image_urls",
+  "imageUrls",
+  "media",
+  "media.items",
+  "media.nodes",
+  "all_listing_photos",
+  "allListingPhotos",
+  "listing_details.photos",
+  "listing_details.images",
+  "listingDetails.photos",
+  "listingDetails.images",
+  "primary_listing_photo",
+  "primaryListingPhoto",
+  "primaryPhoto",
+];
 
-const collectListingImageUrls = (item: ApifyFacebookItem): string[] => {
-  const imageUrls: string[] = [];
-  const seen = new Set<string>();
+const FB_IMAGE_SCALAR_PATHS = [
+  "photo_image_url", "photoImageUrl", "photo_url", "photoUrl",
+  "node.photo_image_url", "node.photoImageUrl", "node.photo_url", "node.photoUrl",
+  "image_url", "imageUrl", "image.url", "image.uri", "image.src", "image.original", "image.large",
+  "node.image_url", "node.imageUrl", "node.image.url", "node.image.uri",
+  "node.image.src", "node.image.original", "node.image.large",
+  "image_uri", "imageUri", "node.image_uri", "node.imageUri",
+  "src", "source", "thumbnail", "thumbnail_url", "thumbnailUrl",
+  "node.thumbnail", "node.thumbnail_url", "node.thumbnailUrl",
+  "preview_image_url", "previewImageUrl",
+  "original_image_url", "originalImageUrl",
+  "display_image_url", "displayImageUrl",
+  "uri", "url", "node.uri", "original", "large",
+];
 
-  const pushUrl = (value: string) => {
-    const normalized = value.trim();
-    if (!isValidHttpUrl(normalized) || seen.has(normalized)) {
-      return;
-    }
-    seen.add(normalized);
-    imageUrls.push(normalized);
-  };
+const collectListingImageUrls = (item: ApifyFacebookItem): string[] =>
+  collectImageUrls(item, FB_IMAGE_COLLECTION_PATHS, FB_IMAGE_SCALAR_PATHS);
 
-  const collectFromUnknown = (value: unknown) => {
-    if (typeof value === "string") {
-      pushUrl(value);
-      return;
-    }
-
-    if (Array.isArray(value)) {
-      value.forEach(collectFromUnknown);
-      return;
-    }
-
-    if (!isJsonObject(value)) {
-      return;
-    }
-
-    const photoObjectCandidatePaths = [
-      "photo_image_url",
-      "photoImageUrl",
-      "photo_url",
-      "photoUrl",
-      "node.photo_image_url",
-      "node.photoImageUrl",
-      "node.photo_url",
-      "node.photoUrl",
-      "image_url",
-      "imageUrl",
-      "image.url",
-      "image.uri",
-      "image.src",
-      "image.original",
-      "image.large",
-      "node.image_url",
-      "node.imageUrl",
-      "node.image.url",
-      "node.image.uri",
-      "node.image.src",
-      "node.image.original",
-      "node.image.large",
-      "image_uri",
-      "imageUri",
-      "node.image_uri",
-      "node.imageUri",
-      "src",
-      "source",
-      "thumbnail",
-      "thumbnail_url",
-      "thumbnailUrl",
-      "node.thumbnail",
-      "node.thumbnail_url",
-      "node.thumbnailUrl",
-      "preview_image_url",
-      "previewImageUrl",
-      "original_image_url",
-      "originalImageUrl",
-      "display_image_url",
-      "displayImageUrl",
-      "uri",
-      "url",
-      "node.uri",
-      "original",
-      "large",
-    ];
-
-    for (const path of photoObjectCandidatePaths) {
-      const nested = getNestedValue(value, path);
-      if (typeof nested === "string") {
-        pushUrl(nested);
-      }
-    }
-  };
-
-  const imageCollectionPaths = [
-    "listingPhotos",
-    "listingPhotos.nodes",
-    "listingPhotos.edges",
-    "listing_photos",
-    "listing_photos.nodes",
-    "listing_photos.edges",
-    "listingPhotos",
-    "listing_media",
-    "listingMedia",
-    "all_photos",
-    "all_photos.nodes",
-    "allPhotos",
-    "allPhotos.nodes",
-    "photos",
-    "photo_urls",
-    "photoUrls",
-    "photo_gallery",
-    "photoGallery",
-    "gallery",
-    "images",
-    "image_urls",
-    "imageUrls",
-    "media",
-    "media.items",
-    "media.nodes",
-    "all_listing_photos",
-    "allListingPhotos",
-    "listing_details.photos",
-    "listing_details.images",
-    "listing_details.gallery",
-    "listing_details.media",
-    "listing_details.all_photos",
-    "listing_details.allPhotos",
-    "listingDetails.photos",
-    "listingDetails.images",
-    "listingDetails.gallery",
-    "listingDetails.media",
-    "listingDetails.allPhotos",
-  ];
-
-  const primaryImagePaths = [
-    "primary_listing_photo.photo_image_url",
-    "primary_listing_photo.image_url",
-    "primary_listing_photo.uri",
-    "primaryListingPhoto.photo_image_url",
-    "primaryListingPhoto.photoImageUrl",
-    "primaryListingPhoto.imageUrl",
-    "primaryListingPhoto.image.uri",
-    "primaryListingPhoto.uri",
-    "primaryPhoto.imageUrl",
-    "primaryPhoto.url",
-  ];
-
-  imageCollectionPaths.forEach((path) => collectFromUnknown(getNestedValue(item, path)));
-  primaryImagePaths.forEach((path) => collectFromUnknown(getNestedValue(item, path)));
-
-  return imageUrls;
-};
-
-const parsePriceAmount = (amount: string | undefined): number => {
-  if (!amount) {
-    return 0;
-  }
-
-  const normalized = amount.replace(/[^0-9]/g, "");
-  const parsed = Number.parseInt(normalized, 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
 
 type CityMapping = {
   canonical: string;
@@ -302,38 +145,6 @@ export const resolveCanonicalCity = (value: string): string | undefined => {
   return undefined;
 };
 
-const parsePositiveInteger = (value: unknown): number | undefined => {
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      return undefined;
-    }
-    const asInteger = Math.trunc(value);
-    return asInteger > 0 ? asInteger : undefined;
-  }
-
-  if (typeof value === "string") {
-    const match = value.match(/\d{1,2}/);
-    if (!match) {
-      return undefined;
-    }
-    const parsed = Number.parseInt(match[0], 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-  }
-
-  return undefined;
-};
-
-const getFirstPositiveInteger = (source: unknown, paths: string[]): number | undefined => {
-  for (const path of paths) {
-    const value = getNestedValue(source, path);
-    const parsed = parsePositiveInteger(value);
-    if (parsed !== undefined) {
-      return parsed;
-    }
-  }
-
-  return undefined;
-};
 
 export const extractRoomsFromDescription = (description: string): number | undefined => {
   const match = description.match(
@@ -501,28 +312,13 @@ const composeLocationLabel = (
   return fallbackLocation;
 };
 
-const getApifyApiToken = (): string => {
-  const token = process.env.APIFY_API_TOKEN;
-  if (!token) {
-    throw new Error("APIFY_API_TOKEN no está definido en .env");
-  }
-  return token;
-};
-
-const normalizeScraperLimit = (count: number): number => {
-  if (!Number.isInteger(count) || count < 1) {
-    throw new Error("El límite del scraper debe ser un entero positivo.");
-  }
-
-  return Math.min(count, MAX_APIFY_RESULTS_LIMIT);
-};
 
 export const runFacebookScraper = async (
   city: string,
   count = DEFAULT_APIFY_RESULTS_LIMIT,
 ): Promise<ScrapedPropertyInput[]> => {
   const normalizedCity = city.trim();
-  const resultsLimit = normalizeScraperLimit(count);
+  const resultsLimit = clampLimit(count, MAX_APIFY_RESULTS_LIMIT);
   const encodedCity = encodeURIComponent(normalizedCity);
   const targetUrl = `https://web.facebook.com/marketplace/112307505452766/search/?query=arriendos%20${encodedCity}`;
   const apifyToken = getApifyApiToken();
